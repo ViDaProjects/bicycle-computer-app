@@ -1,4 +1,4 @@
-package com.example.run_flutter_run
+package com.beforbike.app
 
 import io.flutter.embedding.android.FlutterActivity
 

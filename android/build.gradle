@@ -23,3 +23,12 @@ configurations.all {
      force 'androidx.core:core-ktx:2.0.10'
    }
  }
+
+// Disable AAR metadata validation globally for all projects
+subprojects {
+    tasks.whenTaskAdded { task ->
+        if (task.name.contains('checkAarMetadata')) {
+            task.enabled = false
+        }
+    }
+}

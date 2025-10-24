@@ -15,7 +15,7 @@ class SumUpState {
   /// Creates an initial state with default values.
   factory SumUpState.initial() {
     return SumUpState(
-        isSaving: false, type: ActivityType.running, boundaryKey: GlobalKey());
+        isSaving: false, type: ActivityType.cycling, boundaryKey: GlobalKey());
   }
 
   /// Creates a copy of the state with optional updates.

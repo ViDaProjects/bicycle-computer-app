@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
-import 'package:run_flutter_run/presentation/common/core/utils/ui_utils.dart';
+import 'package:be_for_bike/presentation/common/core/utils/ui_utils.dart';
 
 void main() {
   testWidgets('Loader widget should render correctly',

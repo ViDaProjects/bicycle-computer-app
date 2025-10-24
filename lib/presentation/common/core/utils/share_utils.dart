@@ -1,7 +1,7 @@
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+import 'package:be_for_bike/l10n/app_localizations.dart';
 import 'package:share_plus/share_plus.dart';
 
 /// Utility class for sharing operations.
@@ -12,7 +12,7 @@ class ShareUtils {
     await Share.shareXFiles([
       XFile.fromData(
         image,
-        name: 'run_flutter_run',
+        name: 'be_for_bike',
         mimeType: 'image/png',
       )
     ]);

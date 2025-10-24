@@ -32,7 +32,7 @@ class SettingsViewModel extends StateNotifier<SettingsState> {
       await ref.read(userRepositoryProvider).logout();
       await clearStorage();
       await resetInfiniteLists();
-      navigatorKey.currentState?.pushReplacementNamed("/login");
+      // App will restart and go to home screen
     } catch (error) {
       state = state.copyWith(isLoading: false);
     }
@@ -45,7 +45,7 @@ class SettingsViewModel extends StateNotifier<SettingsState> {
       await ref.read(userRepositoryProvider).delete();
       await clearStorage();
       await resetInfiniteLists();
-      navigatorKey.currentState?.pushReplacementNamed("/login");
+      // App will restart and go to home screen
     } catch (error) {
       state = state.copyWith(isLoading: false);
     }

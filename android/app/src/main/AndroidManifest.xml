@@ -1,13 +1,18 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.example.run_flutter_run">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
     <uses-permission android:name="android.permission.INTERNET"/>
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
+    <uses-permission android:name="android.permission.WAKE_LOCK"/>
    <application
-        android:label="Run Flutter Run"
+        android:label="Be for Bike"
         android:name="${applicationName}"
-        android:icon="@mipmap/run">
+        android:icon="@mipmap/run"
+        android:requestLegacyExternalStorage="true"
+        android:usesCleartextTraffic="true"
+        android:allowBackup="true"
+        android:fullBackupContent="true">
         <activity
             android:name=".MainActivity"
             android:exported="true"

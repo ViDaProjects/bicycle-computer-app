@@ -6,36 +6,11 @@ import '../../core/utils/storage_utils.dart';
 import '../../domain/entities/user.dart';
 import '../model/request/edit_password_request.dart';
 import '../model/request/edit_profile_request.dart';
-import '../model/request/login_request.dart';
-import '../model/request/registration_request.dart';
-import '../model/request/send_new_password_request.dart';
-import '../model/response/login_response.dart';
 import '../model/response/user_response.dart';
 import 'helpers/api_helper.dart';
 
 /// API methods for managing user-related operations.
 class UserApi {
-  /// Creates a new user.
-  ///
-  /// Returns the user ID as an integer.
-  static Future<int> createUser(RegistrationRequest request) async {
-    Response? response = await ApiHelper.makeRequest(
-        '${ApiHelper.apiUrl}user/register', 'POST',
-        data: request.toMap());
-    return response?.data;
-  }
-
-  /// Logs in a user.
-  ///
-  /// Returns a [LoginResponse] object.
-  static Future<LoginResponse> login(LoginRequest request) async {
-    Response? response = await ApiHelper.makeRequest(
-        '${ApiHelper.apiUrl}user/login', 'POST',
-        data: request.toMap());
-
-    return LoginResponse.fromMap(response?.data);
-  }
-
   /// Logs out the current user.
   static Future<void> logout() async {
     await ApiHelper.makeRequest(
@@ -61,18 +36,6 @@ class UserApi {
     await StorageUtils.setJwt(response?.data['token']);
 
     return jwt;
-  }
-
-  /// Send new password by mail
-  ///
-  /// Returns a [String].
-  static Future<String> sendNewPasswordByMail(
-      SendNewPasswordRequest request) async {
-    Response? response = await ApiHelper.makeRequest(
-        '${ApiHelper.apiUrl}user/sendNewPasswordByMail', 'POST',
-        queryParams: request.toMap());
-
-    return response?.data;
   }
 
   /// Edit password

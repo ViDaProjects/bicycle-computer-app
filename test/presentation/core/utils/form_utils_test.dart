@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:run_flutter_run/presentation/common/core/utils/color_utils.dart';
+import 'package:be_for_bike/presentation/common/core/utils/color_utils.dart';
 
-import 'package:run_flutter_run/presentation/common/core/utils/form_utils.dart';
+import 'package:be_for_bike/presentation/common/core/utils/form_utils.dart';
 
 void main() {
   test(
