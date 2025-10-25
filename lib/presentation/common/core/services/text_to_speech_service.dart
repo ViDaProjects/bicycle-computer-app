@@ -5,6 +5,7 @@ import 'package:be_for_bike/l10n/app_localizations.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../../main.dart';
+import 'permission_service.dart';
 
 /// A provider for the text-to-speech service.
 final textToSpeechService = Provider((ref) {
@@ -51,3 +52,8 @@ class TextToSpeechService {
     // await flutterTts.speak(text);
   }
 }
+
+/// A provider for the permission service.
+final permissionService = Provider((ref) {
+  return PermissionService();
+});

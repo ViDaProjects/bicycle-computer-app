@@ -1,16 +1,14 @@
 ﻿import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:intl/intl.dart';
-import 'package:latlong2/latlong.dart';
-import 'package:flutter_map/flutter_map.dart';
+
+import 'package:be_for_bike/l10n/app_localizations.dart';
 
 import '../../../domain/entities/activity.dart';
 import '../../../domain/entities/enum/activity_type.dart';
 import '../../common/core/utils/activity_utils.dart';
 import '../../common/core/utils/color_utils.dart';
-import '../../common/core/widgets/date.dart';
 import '../../common/core/widgets/share_map_button.dart';
-import '../../common/location/widgets/location_map.dart';
 import '../../common/metrics/widgets/metrics.dart';
 import '../../common/timer/widgets/timer_text.dart';
 import '../view_model/activity_details_view_model.dart';
@@ -29,12 +27,12 @@ class DetailsTab extends HookConsumerWidget {
         children: [
           _buildDateTimeItem(
             icon: Icons.play_arrow,
-            label: 'Início',
+            label: 'Start',
             dateTime: activity.startDatetime,
           ),
           _buildDateTimeItem(
             icon: Icons.stop,
-            label: 'Término',
+            label: 'End',
             dateTime: activity.endDatetime,
           ),
         ],
@@ -88,57 +86,6 @@ class DetailsTab extends HookConsumerWidget {
     final displayedActivity = state.activity ?? activity;
     ActivityType selectedType = state.type ?? displayedActivity.type;
 
-    // Calculate the points for the location map.
-    final List<LatLng> points = provider.savedPositionsLatLng(activity);
-    final List<Marker> markers = [];
-
-    // Add markers to the map if activity locations are available.
-    if (activity.locations.isNotEmpty) {
-      markers.add(
-        Marker(
-          width: 80.0,
-          height: 80.0,
-          point: LatLng(
-            activity.locations.first.latitude,
-            activity.locations.first.longitude,
-          ),
-          child: Column(
-            children: [
-              IconButton(
-                icon: const Icon(Icons.location_on_rounded),
-                color: ColorUtils.greenDarker,
-                iconSize: 35.0,
-                onPressed: () {},
-              ),
-            ],
-          ),
-        ),
-      );
-
-      if (activity.locations.length > 1) {
-        markers.add(
-          Marker(
-            width: 80.0,
-            height: 80.0,
-            point: LatLng(
-              activity.locations.last.latitude,
-              activity.locations.last.longitude,
-            ),
-            child: Column(
-              children: [
-                IconButton(
-                  icon: const Icon(Icons.location_on_rounded),
-                  color: ColorUtils.red,
-                  iconSize: 35.0,
-                  onPressed: () {},
-                ),
-              ],
-            ),
-          ),
-        );
-      }
-    }
-
     return Scaffold(
       body: Column(
         children: [
@@ -150,7 +97,6 @@ class DetailsTab extends HookConsumerWidget {
                   const SizedBox(height: 20)
                 ])
               : Container(),
-          Date(date: displayedActivity.startDatetime),
           const SizedBox(height: 10),
           _buildDateTimeInfo(displayedActivity),
           const SizedBox(height: 20),
@@ -166,24 +112,52 @@ class DetailsTab extends HookConsumerWidget {
             power: displayedActivity.power,
             altitude: displayedActivity.altitude,
           ),
-          Expanded(
-            child: SizedBox(
-                height: 500,
-                child: ClipRRect(
-                  borderRadius: const BorderRadius.only(
-                    topLeft: Radius.circular(150),
-                    topRight: Radius.circular(150),
+          const SizedBox(height: 20),
+          // Activity summary information
+          Container(
+            padding: const EdgeInsets.all(16),
+            margin: const EdgeInsets.symmetric(horizontal: 16),
+            decoration: BoxDecoration(
+              color: ColorUtils.white,
+              borderRadius: BorderRadius.circular(12),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.grey.withValues(alpha: 0.1),
+                  spreadRadius: 1,
+                  blurRadius: 5,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Activity Summary',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: ColorUtils.blueGrey,
                   ),
-                  child: RepaintBoundary(
-                    key: state.boundaryKey,
-                    child: LocationMap(
-                      points: points,
-                      markers: markers,
-                      mapController: MapController(),
-                    ),
-                  ),
-                )),
-          )
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  'Type: ${ActivityUtils.translateActivityTypeValue(AppLocalizations.of(context)!, displayedActivity.type)}',
+                  style: const TextStyle(fontSize: 16),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Distance: ${displayedActivity.distance.toStringAsFixed(2)} km',
+                  style: const TextStyle(fontSize: 16),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Duration: ${displayedActivity.time ~/ 3600}:${((displayedActivity.time % 3600) ~/ 60).toString().padLeft(2, '0')}:${(displayedActivity.time % 60).toString().padLeft(2, '0')}',
+                  style: const TextStyle(fontSize: 16),
+                ),
+              ],
+            ),
+          ),
         ],
       ),
       floatingActionButton: state.isEditing || state.isLoading

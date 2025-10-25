@@ -43,7 +43,7 @@ class ColorUtils {
   static Color generateDarkColor(Color baseColor) {
     final luminance = baseColor.computeLuminance();
     final darkColor =
-        luminance > 0.5 ? baseColor.withOpacity(0.8) : baseColor.darker();
+        luminance > 0.5 ? baseColor.withValues(alpha: 0.8) : baseColor.darker();
     return darkColor;
   }
 
@@ -54,7 +54,7 @@ class ColorUtils {
   static Color generateLightColor(Color baseColor) {
     final luminance = baseColor.computeLuminance();
     final lightColor =
-        luminance > 0.5 ? baseColor.lighter() : baseColor.withOpacity(0.8);
+        luminance > 0.5 ? baseColor.lighter() : baseColor.withValues(alpha: 0.8);
     return lightColor;
   }
 
@@ -68,6 +68,66 @@ class ColorUtils {
     final darkColor = generateDarkColor(baseColor);
     final lightColor = generateLightColor(baseColor);
     return [darkColor, lightColor];
+  }
+
+  /// Generates a color based on calories burned (orange to yellow gradient).
+  ///
+  /// Lower calories = more orange, higher calories = more yellow.
+  static Color generateColorFromCalories(double calories) {
+    // Normalize calories (assuming 0-1000 range, adjust as needed)
+    final normalized = (calories / 1000).clamp(0.0, 1.0);
+
+    // Interpolate between orange and yellow
+    final orange = Colors.orange;
+    final yellow = Colors.yellow.shade600;
+
+    return Color.lerp(orange, yellow, normalized)!;
+  }
+
+  /// Generates a gradient based on calories burned with smooth transition from light blue to light orange.
+  ///
+  /// Returns a list of colors for gradient: [startColor, endColor]
+  static List<Color> generateGradientFromCalories(double calories) {
+    // Use wider range for more variation (0-2000 kcal)
+    final normalized = (calories / 2000).clamp(0.0, 1.0);
+
+    // Very light colors with smooth transition from light blue to light orange
+    final lightBlue = Colors.blue.shade50.withOpacity(0.25); // Very light blue for very low calories
+    final lightBlueMedium = Colors.blue.shade100.withOpacity(0.3);
+    final lightCyan = Colors.cyan.shade50.withOpacity(0.25); // Light cyan for low-medium calories
+    final lightCyanMedium = Colors.cyan.shade100.withOpacity(0.3);
+    final lightGreen = Colors.lightGreen.shade50.withOpacity(0.25); // Light green for medium calories
+    final lightGreenMedium = Colors.lightGreen.shade100.withOpacity(0.3);
+    final lightYellow = Colors.yellow.shade50.withOpacity(0.25); // Light yellow for medium-high calories
+    final lightYellowMedium = Colors.yellow.shade100.withOpacity(0.3);
+    final lightOrange = Colors.orange.shade50.withOpacity(0.25); // Light orange for high calories
+    final lightOrangeMedium = Colors.orange.shade100.withOpacity(0.3);
+
+    // Create smooth gradient transitions based on calorie ranges
+    Color startColor, endColor;
+    if (normalized < 0.2) {
+      // Very low calories: very light blue
+      startColor = lightBlue;
+      endColor = lightBlueMedium;
+    } else if (normalized < 0.4) {
+      // Low calories: light blue to light cyan
+      startColor = Color.lerp(lightBlue, lightCyan, (normalized - 0.2) / 0.2)!;
+      endColor = Color.lerp(lightBlueMedium, lightCyanMedium, (normalized - 0.2) / 0.2)!;
+    } else if (normalized < 0.6) {
+      // Medium-low calories: light cyan to light green
+      startColor = Color.lerp(lightCyan, lightGreen, (normalized - 0.4) / 0.2)!;
+      endColor = Color.lerp(lightCyanMedium, lightGreenMedium, (normalized - 0.4) / 0.2)!;
+    } else if (normalized < 0.8) {
+      // Medium-high calories: light green to light yellow
+      startColor = Color.lerp(lightGreen, lightYellow, (normalized - 0.6) / 0.2)!;
+      endColor = Color.lerp(lightGreenMedium, lightYellowMedium, (normalized - 0.6) / 0.2)!;
+    } else {
+      // High calories: light yellow to light orange
+      startColor = Color.lerp(lightYellow, lightOrange, (normalized - 0.8) / 0.2)!;
+      endColor = Color.lerp(lightYellowMedium, lightOrangeMedium, (normalized - 0.8) / 0.2)!;
+    }
+
+    return [startColor, endColor];
   }
 
   static Future<ImageProvider<Object>?> colorToImageProvider(Color color,
@@ -95,10 +155,10 @@ extension ColorExtension on Color {
   /// A factor of 0.0 represents the same color, while a factor of 1.0 represents a fully dark color.
   Color darker([double factor = 0.1]) {
     return Color.fromARGB(
-      alpha,
-      (red * (1.0 - factor)).round(),
-      (green * (1.0 - factor)).round(),
-      (blue * (1.0 - factor)).round(),
+      (a * 255.0).round() & 0xff,
+      (r * 255.0).round() & 0xff,
+      (g * 255.0).round() & 0xff,
+      (b * 255.0).round() & 0xff,
     );
   }
 
@@ -108,10 +168,10 @@ extension ColorExtension on Color {
   /// A factor of 0.0 represents the same color, while a factor of 1.0 represents a fully light color.
   Color lighter([double factor = 0.1]) {
     return Color.fromARGB(
-      alpha,
-      (red + (255 - red) * factor).round(),
-      (green + (255 - green) * factor).round(),
-      (blue + (255 - blue) * factor).round(),
+      (a * 255.0).round() & 0xff,
+      (r * 255.0).round() & 0xff,
+      (g * 255.0).round() & 0xff,
+      (b * 255.0).round() & 0xff,
     );
   }
 }

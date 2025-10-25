@@ -34,19 +34,20 @@ class HomeScreen extends HookConsumerWidget {
         bottomNavigationBar: Container(
             color: ColorUtils.mainMedium,
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 20),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
               child: GNav(
                 backgroundColor: ColorUtils.mainMedium,
                 color: ColorUtils.white,
                 activeColor: ColorUtils.white,
                 tabBackgroundColor: ColorUtils.mainDarker,
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
                 selectedIndex: currentIndex,
                 onTabChange: (value) {
                   homeViewModel.setCurrentIndex(value);
                 },
                 gap: 4,
-                tabs: [
+                iconSize: 20,
+                tabs: const [
                   GButton(
                     icon: Icons.list,
                     text: 'List',

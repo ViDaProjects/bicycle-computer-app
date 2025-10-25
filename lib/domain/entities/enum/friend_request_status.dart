@@ -18,8 +18,6 @@ extension FriendRequestStatusExtension on FriendRequestStatus {
         return localization.canceled;
       case FriendRequestStatus.noDisplay:
         return '';
-      default:
-        return '';
     }
   }
 }

@@ -1,11 +1,10 @@
 import 'dart:async';
 
-import 'package:flutter_map/flutter_map.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:latlong2/latlong.dart';
 
-import '../../../../../data/model/request/location_request.dart';
+import '../../../../data/model/request/location_request.dart';
 import '../../metrics/view_model/metrics_view_model.dart';
 import '../../timer/viewmodel/timer_view_model.dart';
 import 'state/location_state.dart';
@@ -18,7 +17,6 @@ final locationViewModelProvider =
 /// View model for managing location-related functionality.
 class LocationViewModel extends StateNotifier<LocationState> {
   final Ref ref;
-  MapController? mapController = MapController();
   StreamSubscription<Position>? _positionStream;
 
   /// Creates a [LocationViewModel] instance.
@@ -30,6 +28,11 @@ class LocationViewModel extends StateNotifier<LocationState> {
   Future<void> dispose() async {
     await cancelLocationStream();
     super.dispose();
+  }
+
+  /// Marks the map as ready for interactions.
+  void setMapReady() {
+    // Map ready functionality removed - each widget manages its own map controller
   }
 
   /// Starts getting the user's location updates.
@@ -44,15 +47,40 @@ class LocationViewModel extends StateNotifier<LocationState> {
         return;
       }
     }
+
+    // Try to get initial position immediately
+    try {
+      final initialPosition = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+        timeLimit: const Duration(seconds: 5),
+      );
+
+      // Update state with initial position immediately
+      state = state.copyWith(
+        currentPosition: initialPosition,
+        lastPosition: state.currentPosition ?? initialPosition,
+      );
+    } catch (e) {
+      // Could not get initial position, continue with stream
+      // Try with lower accuracy as fallback
+      try {
+        final fallbackPosition = await Geolocator.getCurrentPosition(
+          desiredAccuracy: LocationAccuracy.medium,
+          timeLimit: const Duration(seconds: 3),
+        );
+
+        state = state.copyWith(
+          currentPosition: fallbackPosition,
+          lastPosition: state.currentPosition ?? fallbackPosition,
+        );
+      } catch (fallbackError) {
+        // Could not get any position
+      }
+    }
+
     _positionStream ??=
         Geolocator.getPositionStream().listen((Position position) {
-      if (mounted && _positionStream != null && mapController != null) {
-        if (mounted && _positionStream != null && mapController != null) {
-          mapController?.move(
-            LatLng(position.latitude, position.longitude),
-            17,
-          );
-        }
+      if (mounted && _positionStream != null) {
 
         final timerProvider = ref.read(timerViewModelProvider.notifier);
         if (timerProvider.isTimerRunning() && timerProvider.hasTimerStarted()) {
@@ -74,6 +102,8 @@ class LocationViewModel extends StateNotifier<LocationState> {
           lastPosition: state.currentPosition ?? position,
         );
       }
+    }, onError: (error) {
+      // Position stream error
     });
   }
 

@@ -31,9 +31,9 @@ class ActivityItemDetails extends StatelessWidget {
         ),
         const SizedBox(height: 8),
         buildDetailRow(
-            Icons.location_on, '${activity.distance.toStringAsFixed(2)} km'),
+            Icons.straighten, '${activity.distance.toStringAsFixed(2)} km'),
         buildDetailRow(
-            Icons.speed, '${activity.speed.toStringAsFixed(2)} km/h'),
+            Icons.local_fire_department, '${activity.calories.toStringAsFixed(0)} kcal'),
       ],
     );
   }
@@ -71,7 +71,7 @@ class ActivityItemDetails extends StatelessWidget {
                     activity.type,
                   ).toUpperCase(),
                   style: TextStyle(
-                    color: color,
+                    color: Colors.black,
                     fontFamily: 'Avenir',
                     fontWeight: FontWeight.bold,
                   ),

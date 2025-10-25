@@ -2,7 +2,7 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:be_for_bike/l10n/app_localizations.dart';
+import 'l10n/app_localizations.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:stack_trace/stack_trace.dart' as stack_trace;
@@ -49,6 +49,11 @@ void main() async {
   }
 }
 
+/// Provider for the theme mode.
+final themeModeProvider = StateProvider<ThemeMode>((ref) {
+  return ThemeMode.light;
+});
+
 /// Provider for the MyAppViewModel.
 final myAppProvider = Provider((ref) {
   return MyAppViewModel(ref);
@@ -61,14 +66,15 @@ class MyAppViewModel {
   MyAppViewModel(this.ref);
 
   /// Initializes the app, e.g., initializes services.
-  void init() {
+  void init() async {
     ref.read(textToSpeechService).init();
+    await ref.read(permissionService).requestAllPermissions();
   }
 
   /// Retrieves the localized configuration based on the current locale.
   Future<AppLocalizations> getLocalizedConf() async {
-    final lang = ui.window.locale.languageCode;
-    final country = ui.window.locale.countryCode;
+    final lang = ui.PlatformDispatcher.instance.locale.languageCode;
+    final country = ui.PlatformDispatcher.instance.locale.countryCode;
     return await AppLocalizations.delegate.load(Locale(lang, country));
   }
 }
@@ -78,7 +84,7 @@ class MyApp extends HookConsumerWidget {
   const MyApp({super.key});
 
   /// Builds the MaterialApp with the provided home widget.
-  MaterialApp buildMaterialApp(Widget home) {
+  MaterialApp buildMaterialApp(Widget home, ThemeMode themeMode) {
     return MaterialApp(
       initialRoute: '/',
       routes: {
@@ -99,6 +105,18 @@ class MyApp extends HookConsumerWidget {
         bottomSheetTheme:
             BottomSheetThemeData(backgroundColor: ColorUtils.transparent),
       ),
+      darkTheme: ThemeData.dark().copyWith(
+        textSelectionTheme: TextSelectionThemeData(
+          cursorColor: ColorUtils.main,
+          selectionColor: ColorUtils.main,
+          selectionHandleColor: ColorUtils.main,
+        ),
+        primaryColor: ColorUtils.main,
+        splashColor: ColorUtils.blueGreyDarker,
+        bottomSheetTheme:
+            BottomSheetThemeData(backgroundColor: ColorUtils.transparent),
+      ),
+      themeMode: themeMode,
       localizationsDelegates: const [
         AppLocalizations.delegate,
         GlobalMaterialLocalizations.delegate,
@@ -114,9 +132,10 @@ class MyApp extends HookConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final provider = ref.read(myAppProvider);
+    final themeMode = ref.watch(themeModeProvider);
 
     provider.init();
 
-    return buildMaterialApp(const HomeScreen());
+    return buildMaterialApp(const HomeScreen(), themeMode);
   }
 }

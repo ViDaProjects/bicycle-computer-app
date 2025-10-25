@@ -112,12 +112,18 @@ class GraphTab extends StatelessWidget {
                             titlesData: FlTitlesData(
                               leftTitles: AxisTitles(
                                 axisNameSize: 30,
-                                axisNameWidget: const Text('km/h',
-                                    style:
-                                        TextStyle(fontWeight: FontWeight.w900)),
+                                axisNameWidget: const RotatedBox(
+                                  quarterTurns: 3,
+                                  child: Text('km/h',
+                                      textAlign: TextAlign.center,
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.w900,
+                                        fontSize: 14,
+                                      )),
+                                ),
                                 sideTitles: SideTitles(
                                   showTitles: true,
-                                  reservedSize: 30,
+                                  reservedSize: 40,
                                   getTitlesWidget: (value, _) {
                                     if (value == 0 ||
                                         value ==
@@ -125,7 +131,10 @@ class GraphTab extends StatelessWidget {
                                                 1.25) {
                                       return const Text('');
                                     } else {
-                                      return Text(value.toStringAsFixed(1));
+                                      return Text(
+                                        value.toStringAsFixed(1),
+                                        style: const TextStyle(fontSize: 10),
+                                      );
                                     }
                                   },
                                 ),
@@ -135,20 +144,29 @@ class GraphTab extends StatelessWidget {
                               topTitles: const AxisTitles(
                                   sideTitles: SideTitles(showTitles: false)),
                               bottomTitles: AxisTitles(
-                                  axisNameWidget: const Text('km',
-                                      style: TextStyle(
-                                          fontWeight: FontWeight.w900)),
+                                  axisNameWidget: const RotatedBox(
+                                    quarterTurns: 0,
+                                    child: Text('km',
+                                        textAlign: TextAlign.center,
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.w900,
+                                          fontSize: 14,
+                                        )),
+                                  ),
                                   sideTitles: SideTitles(
                                     showTitles: true,
                                     interval: activity.distance > 2 ? 1 : 0.5,
-                                    reservedSize: 30,
+                                    reservedSize: 40,
                                     getTitlesWidget: (value, _) {
                                       if (value == 0 ||
                                           (activity.distance > 0.5 &&
                                               value == activity.distance)) {
                                         return const Text('');
                                       } else {
-                                        return Text(value.toStringAsFixed(1));
+                                        return Text(
+                                          value.toStringAsFixed(1),
+                                          style: const TextStyle(fontSize: 10),
+                                        );
                                       }
                                     },
                                   )),

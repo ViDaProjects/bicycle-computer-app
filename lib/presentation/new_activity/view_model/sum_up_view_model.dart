@@ -103,9 +103,9 @@ class SumUpViewModel extends StateNotifier<SumUpState> {
         locations: locations
             .map((l) => Location(
                 id: '',
-                datetime: l.datetime,
-                latitude: l.latitude,
-                longitude: l.longitude))
+                datetime: l?.datetime ?? DateTime.now(),
+                latitude: l?.latitude ?? 0,
+                longitude: l?.longitude ?? 0))
             .toList(),
         user: const User(id: '', username: '', firstname: '', lastname: ''),
         comments: const []);

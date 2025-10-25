@@ -5,25 +5,17 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:latlong2/latlong.dart';
 
 import '../../core/utils/color_utils.dart';
-import '../../core/utils/ui_utils.dart';
 import '../view_model/location_view_model.dart';
 import 'location_map.dart';
 
 /// Widget that displays the current location on a map.
 class CurrentLocationMap extends HookConsumerWidget {
-  CurrentLocationMap({super.key});
-
-  final dataFutureProvider = FutureProvider<void>((ref) async {
-    final provider = ref.read(locationViewModelProvider.notifier);
-    return await provider.startGettingLocation();
-  });
+  const CurrentLocationMap({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final provider = ref.read(locationViewModelProvider.notifier);
     final state = ref.watch(locationViewModelProvider);
-
-    var futureProvider = ref.watch(dataFutureProvider);
 
     final points = provider.savedPositionsLatLng();
 
@@ -31,18 +23,45 @@ class CurrentLocationMap extends HookConsumerWidget {
     final currentLatitude = currentPosition?.latitude ?? 0;
     final currentLongitude = currentPosition?.longitude ?? 0;
 
-    final markers = <Marker>[
-      Marker(
-        width: 80,
-        height: 80,
-        point: LatLng(currentLatitude, currentLongitude),
-        child: Icon(
-          Icons.circle,
-          size: 20,
-          color: ColorUtils.errorDarker,
+    // State for satellite view toggle
+    final useSatelliteView = useState(false);
+
+    // Start location service when widget is built
+    useEffect(() {
+      provider.startGettingLocation();
+      return () async {
+        await provider.cancelLocationStream();
+      };
+    }, [provider]);
+
+    // Force map ready state immediately
+    useEffect(() {
+      provider.setMapReady();
+      return null;
+    }, []);
+
+    final markers = <Marker>[];
+    if (currentPosition != null) {
+      markers.add(
+        Marker(
+          width: 80,
+          height: 80,
+          point: LatLng(currentLatitude, currentLongitude),
+          child: Container(
+            decoration: BoxDecoration(
+              color: Colors.blue.withValues(alpha: 0.8),
+              shape: BoxShape.circle,
+              border: Border.all(color: Colors.white, width: 2),
+            ),
+            child: Icon(
+              Icons.my_location,
+              size: 20,
+              color: Colors.white,
+            ),
+          ),
         ),
-      ),
-    ];
+      );
+    }
 
     if (points.isNotEmpty) {
       markers.add(
@@ -67,17 +86,13 @@ class CurrentLocationMap extends HookConsumerWidget {
       );
     }
 
-    useEffect(() {
-      return () async {
-        await provider.cancelLocationStream();
-      };
-    }, []);
-
-    return futureProvider.when(data: (total) {
-      return Expanded(
-          child: SizedBox(
-              height: 500,
-              child: ClipRRect(
+    // Always show the map
+    return Expanded(
+        child: SizedBox(
+            height: 500,
+            child: Stack(
+              children: [
+                ClipRRect(
                   borderRadius: const BorderRadius.only(
                     topLeft: Radius.circular(150),
                     topRight: Radius.circular(150),
@@ -85,13 +100,43 @@ class CurrentLocationMap extends HookConsumerWidget {
                   child: LocationMap(
                     points: points,
                     markers: markers,
-                    currentPosition: LatLng(currentLatitude, currentLongitude),
-                    mapController: provider.mapController ?? MapController(),
-                  ))));
-    }, loading: () {
-      return Expanded(child: Center(child: UIUtils.loader));
-    }, error: (error, stackTrace) {
-      return Text('$error');
-    });
+                    currentPosition: currentPosition != null ? LatLng(currentLatitude, currentLongitude) : null,
+                    mapController: MapController(),
+                    onMapReady: () {
+                      // Map ready functionality removed
+                    },
+                    useSatelliteView: useSatelliteView.value,
+                  ),
+                ),
+                // Satellite/Map toggle button - always visible
+                Positioned(
+                  top: 16,
+                  right: 16,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.9),
+                      borderRadius: BorderRadius.circular(8),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.2),
+                          blurRadius: 4,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: IconButton(
+                      icon: Icon(
+                        useSatelliteView.value ? Icons.map : Icons.satellite,
+                        color: ColorUtils.main,
+                      ),
+                      onPressed: () {
+                        useSatelliteView.value = !useSatelliteView.value;
+                      },
+                      tooltip: useSatelliteView.value ? 'Mostrar mapa' : 'Mostrar satélite',
+                    ),
+                  ),
+                ),
+              ],
+            )));
   }
 }

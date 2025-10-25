@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 
-import '../../../../../main.dart';
+import '../../../../main.dart';
 import '../../core/services/text_to_speech_service.dart';
 import '../../core/utils/type_utils.dart';
 import '../../location/view_model/location_view_model.dart';

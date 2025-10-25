@@ -91,19 +91,19 @@ class ActivityDetailsScreen extends HookConsumerWidget {
                             tabs: const [
                               GButton(
                                 icon: Icons.list,
-                                text: 'Lista',
+                                text: 'List',
                               ),
                               GButton(
                                 icon: Icons.map,
-                                text: 'Mapa',
+                                text: 'Map',
                               ),
                               GButton(
                                 icon: Icons.bar_chart,
-                                text: 'Estatísticas',
+                                text: 'Statistics',
                               ),
                               GButton(
                                 icon: Icons.settings,
-                                text: 'Configurações',
+                                text: 'Settings',
                               ),
                             ],
                           ),

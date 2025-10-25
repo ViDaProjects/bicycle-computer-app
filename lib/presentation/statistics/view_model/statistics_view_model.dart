@@ -48,9 +48,7 @@ class StatisticsViewModel extends StateNotifier<StatisticsState> {
       }).toList();
 
       state = state.copyWith(isLoading: false, activityData: activityData);
-    } on PlatformException catch (e) {
-      print("Failed to get activity data: '${e.message}'.");
-
+    } catch (e) {
       // Fallback to mock data if database is not available
       _loadMockData();
     }

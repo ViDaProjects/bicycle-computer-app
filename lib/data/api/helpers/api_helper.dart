@@ -67,7 +67,7 @@ class ApiHelper {
           break;
       }
       return response;
-    } on DioError catch (error) {
+    } on DioException catch (error) {
       if (error.response?.statusCode == 401) {
         return remoteApi.handleUnauthorizedError(error, data, queryParams);
       }
@@ -149,7 +149,7 @@ class RemoteApi {
 
         handler.next(response);
       },
-      onError: (DioError error, ErrorInterceptorHandler handler) async {
+      onError: (DioException error, ErrorInterceptorHandler handler) async {
         handler.next(error);
       },
     ));
@@ -170,7 +170,7 @@ class RemoteApi {
   /// Handles an unauthorized error by refreshing the JWT and making the request again.
   ///
   /// Returns the [Response] object or null if navigation to the login screen occurs.
-  Future<Response?> handleUnauthorizedError(DioError error,
+  Future<Response?> handleUnauthorizedError(DioException error,
       Map<String, dynamic>? data, Map<String, dynamic>? queryParams) async {
     try {
       String? jwt = await UserApi.refreshToken();
@@ -188,10 +188,10 @@ class RemoteApi {
             responseType: error.requestOptions.responseType,
           ),
         );
-      } on DioError catch (_) {
+      } on DioException catch (_) {
         navigatorKey.currentState?.pushReplacementNamed('/login');
       }
-    } on DioError {
+    } on DioException {
       navigatorKey.currentState?.pushReplacementNamed('/login');
     }
     return null;

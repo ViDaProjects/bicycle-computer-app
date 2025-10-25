@@ -1,6 +1,6 @@
 import 'package:geolocator/geolocator.dart';
 
-import '../../../../../../data/model/request/location_request.dart';
+import '../../../../../data/model/request/location_request.dart';
 
 /// Represents the state of the location.
 class LocationState {

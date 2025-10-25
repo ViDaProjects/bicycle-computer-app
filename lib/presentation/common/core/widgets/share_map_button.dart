@@ -59,7 +59,9 @@ class ShareMapButton extends HookConsumerWidget {
 
           await shareImageWithText(image);
         } catch (e) {
-          ShareUtils.showShareFailureSnackBar(context);
+          if (context.mounted) {
+            ShareUtils.showShareFailureSnackBar(context);
+          }
         }
       },
       backgroundColor: ColorUtils.main,

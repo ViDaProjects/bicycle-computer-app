@@ -7,7 +7,6 @@ import '../../../../main.dart';
 import '../../../home/view_model/home_view_model.dart';
 import '../../../my_activities/screens/activity_details_screen.dart';
 import '../../../my_activities/view_model/activity_list_view_model.dart';
-import '../../../statistics/screens/statistics_screen.dart';
 import '../../user/view_model/profile_picture_view_model.dart';
 import 'state/activity_item_state.dart';
 
@@ -77,20 +76,7 @@ class ActivityItemViewModel extends StateNotifier<ActivityItemState> {
   void goToStatistics(Activity activityDetails) {
     // Set the selected activity in the home view model
     ref.read(homeViewModelProvider.notifier).setSelectedActivity(activityDetails);
-
-    // Navigate to the statistics screen
-    navigatorKey.currentState?.push(
-      PageRouteBuilder(
-        transitionDuration: const Duration(milliseconds: 500),
-        pageBuilder: (context, animation, secondaryAnimation) =>
-            SlideTransition(
-          position: Tween<Offset>(
-            begin: const Offset(1.0, 0.0),
-            end: Offset.zero,
-          ).animate(animation),
-          child: StatisticsScreen(),
-        ),
-      ),
-    );
+    // Navigate to the statistics tab (index 2)
+    ref.read(homeViewModelProvider.notifier).setCurrentIndex(2);
   }
 }

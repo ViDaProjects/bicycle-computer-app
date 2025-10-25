@@ -32,12 +32,14 @@ class ActivityItem extends HookConsumerWidget {
         ref.read(activityItemViewModelProvider(activity.id).notifier);
     final state = ref.watch(activityItemViewModelProvider(activity.id));
 
-    final List<Color> colors = ColorUtils.generateColorTupleFromIndex(index);
-    final titleColor = colors.first;
-
     const double borderRadius = 24;
 
     Activity currentActivity = state.activity ?? activity;
+
+    final titleColor = ColorUtils.generateColorFromCalories(currentActivity.calories); // Dynamic color based on calories
+
+    // Create gradient based on calories
+    final gradientColors = ColorUtils.generateGradientFromCalories(currentActivity.calories);
 
     return FutureBuilder<void>(future: Future(() async {
       final likeProvider =
@@ -58,17 +60,34 @@ class ActivityItem extends HookConsumerWidget {
             if (canOpenActivity) {
               final activityDetails =
                   await provider.getActivityDetails(activity);
-              provider.goToActivity(activityDetails);
+              provider.goToStatistics(activityDetails);
             }
           },
           child: Card(
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(borderRadius),
             ),
-            elevation: 0.25,
+            elevation: 2,
             margin: const EdgeInsets.all(8),
-            child: Column(
-              children: [
+            child: Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: gradientColors,
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(borderRadius),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.grey.withOpacity(0.2),
+                    spreadRadius: 1,
+                    blurRadius: 4,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Column(
+                children: [
                 Row(
                   children: [
                     if (!displayUserName)
@@ -119,7 +138,8 @@ class ActivityItem extends HookConsumerWidget {
                   ActivityItemInteraction(
                     currentActivity: currentActivity,
                   ),
-              ],
+                ],
+              ),
             ),
           ),
         );

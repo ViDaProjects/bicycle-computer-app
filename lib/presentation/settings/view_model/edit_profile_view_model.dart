@@ -57,7 +57,7 @@ class EditProfileViewModel extends StateNotifier<EditProfileState> {
     });
   }
 
-  Future<void> getProfilePicture(FutureProviderRef<void> ref) async {
+  Future<void> getProfilePicture(Ref ref) async {
     User? currentUser = await StorageUtils.getUser();
     if (currentUser != null) {
       ref

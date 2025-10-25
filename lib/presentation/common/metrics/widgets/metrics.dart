@@ -51,7 +51,7 @@ class Metrics extends HookConsumerWidget {
       padding: const EdgeInsets.symmetric(horizontal: 16.0),
       child: Column(
         children: [
-          // Primeira linha: Distância e Velocidade
+          // First row: Distance and Speed
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
@@ -72,7 +72,7 @@ class Metrics extends HookConsumerWidget {
             ],
           ),
           const SizedBox(height: 20),
-          // Segunda linha: Cadência e Calorias
+          // Second row: Cadence and Calories
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
@@ -93,7 +93,7 @@ class Metrics extends HookConsumerWidget {
             ],
           ),
           const SizedBox(height: 20),
-          // Terceira linha: Potência e Altitude
+          // Third row: Power and Altitude
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
@@ -125,18 +125,58 @@ class Metrics extends HookConsumerWidget {
     required TextStyle textStyle,
     required TextStyle labelStyle,
   }) {
-    return Row(
-      children: [
-        Icon(icon, size: 30, color: Colors.blueGrey),
-        const SizedBox(width: 8),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(value, style: textStyle),
-            Text(label, style: labelStyle),
-          ],
+    return Container(
+      width: 140,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.1),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
+        ],
+        border: Border.all(
+          color: Colors.grey.withValues(alpha: 0.2),
+          width: 1,
         ),
-      ],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: Colors.blue.withValues(alpha: 0.1),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              icon,
+              size: 24,
+              color: Colors.blue.shade600,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            value,
+            style: textStyle.copyWith(
+              color: Colors.black87,
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          Text(
+            label,
+            style: labelStyle.copyWith(
+              color: Colors.grey.shade600,
+              fontSize: 11,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

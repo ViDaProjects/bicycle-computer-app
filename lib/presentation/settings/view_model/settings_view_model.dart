@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../../core/utils/storage_utils.dart';
 import '../../../data/repositories/user_repository_impl.dart';
 import '../../../domain/entities/user.dart';
+import '../../../main.dart';
 import '../../common/core/enums/infinite_scroll_list.enum.dart';
 import '../../common/core/utils/color_utils.dart';
 import '../../common/core/widgets/view_model/infinite_scroll_list_view_model.dart';
@@ -27,6 +28,34 @@ class SettingsViewModel extends StateNotifier<SettingsState> {
   /// Toggles the bluetooth state.
   void toggleBluetooth() {
     state = state.copyWith(isBluetoothEnabled: !state.isBluetoothEnabled);
+  }
+
+  /// Toggles the dark mode state.
+  void toggleDarkMode() {
+    state = state.copyWith(isDarkMode: !state.isDarkMode);
+    // Update the global theme mode
+    ref.read(themeModeProvider.notifier).state =
+        state.isDarkMode ? ThemeMode.dark : ThemeMode.light;
+  }
+
+  /// Toggles the speed chart visibility.
+  void toggleSpeedChart() {
+    state = state.copyWith(showSpeedChart: !state.showSpeedChart);
+  }
+
+  /// Toggles the cadence chart visibility.
+  void toggleCadenceChart() {
+    state = state.copyWith(showCadenceChart: !state.showCadenceChart);
+  }
+
+  /// Toggles the power chart visibility.
+  void togglePowerChart() {
+    state = state.copyWith(showPowerChart: !state.showPowerChart);
+  }
+
+  /// Toggles the altitude chart visibility.
+  void toggleAltitudeChart() {
+    state = state.copyWith(showAltitudeChart: !state.showAltitudeChart);
   }
 
   /// Deletes the user account.

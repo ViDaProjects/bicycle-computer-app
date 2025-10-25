@@ -20,8 +20,6 @@ class SettingsScreen extends HookConsumerWidget {
             ? Center(child: UIUtils.loader)
             : Column(
                 children: [
-                  const SizedBox(height: 40),
-                  const Divider(),
                   const SizedBox(height: 20),
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 16.0),
@@ -38,6 +36,122 @@ class SettingsScreen extends HookConsumerWidget {
                         CupertinoSwitch(
                           value: state.isBluetoothEnabled,
                           onChanged: (value) => provider.toggleBluetooth(),
+                          activeTrackColor: ColorUtils.main,
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          'Dark Mode',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        CupertinoSwitch(
+                          value: state.isDarkMode,
+                          onChanged: (value) => provider.toggleDarkMode(),
+                          activeTrackColor: ColorUtils.main,
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 16.0),
+                    child: Text(
+                      'Chart Visibility',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          'Speed Chart',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w400,
+                          ),
+                        ),
+                        CupertinoSwitch(
+                          value: state.showSpeedChart,
+                          onChanged: (value) => provider.toggleSpeedChart(),
+                          activeTrackColor: ColorUtils.main,
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          'Cadence Chart',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w400,
+                          ),
+                        ),
+                        CupertinoSwitch(
+                          value: state.showCadenceChart,
+                          onChanged: (value) => provider.toggleCadenceChart(),
+                          activeTrackColor: ColorUtils.main,
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          'Power Chart',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w400,
+                          ),
+                        ),
+                        CupertinoSwitch(
+                          value: state.showPowerChart,
+                          onChanged: (value) => provider.togglePowerChart(),
+                          activeTrackColor: ColorUtils.main,
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          'Altitude Chart',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w400,
+                          ),
+                        ),
+                        CupertinoSwitch(
+                          value: state.showAltitudeChart,
+                          onChanged: (value) => provider.toggleAltitudeChart(),
                           activeTrackColor: ColorUtils.main,
                         ),
                       ],
