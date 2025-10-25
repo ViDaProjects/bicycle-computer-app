@@ -8,7 +8,7 @@
    <application
         android:label="Be for Bike"
         android:name="${applicationName}"
-        android:icon="@mipmap/run"
+        android:icon="@mipmap/launcher_icon"
         android:requestLegacyExternalStorage="true"
         android:usesCleartextTraffic="true"
         android:allowBackup="true"

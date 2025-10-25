@@ -1,17 +1,16 @@
 import 'package:flutter/material.dart';
-import 'package:be_for_bike/l10n/app_localizations.dart';
 import 'package:google_nav_bar/google_nav_bar.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../common/core/utils/color_utils.dart';
 import '../../my_activities/screens/activity_list_screen.dart';
-import '../../new_activity/screens/new_activity_screen.dart';
 import '../../settings/screens/settings_screen.dart';
 import '../../statistics/screens/statistics_screen.dart';
+import 'map_screen.dart';
 import '../view_model/home_view_model.dart';
 
 /// An enumeration representing the available tabs in the home screen.
-enum Tabs { home, list, statistics, settings }
+enum Tabs { list, map, statistics, settings }
 
 /// The home screen widget.
 class HomeScreen extends HookConsumerWidget {
@@ -24,9 +23,9 @@ class HomeScreen extends HookConsumerWidget {
     final currentIndex = state.currentIndex;
 
     final tabs = [
-      const NewActivityScreen(),
       ActivityListScreen(),
-      const StatisticsScreen(),
+      const MapScreen(),
+      StatisticsScreen(selectedActivity: state.selectedActivity),
       const SettingsScreen(),
     ];
 
@@ -49,20 +48,20 @@ class HomeScreen extends HookConsumerWidget {
                 gap: 4,
                 tabs: [
                   GButton(
-                    icon: Icons.flash_on,
-                    text: AppLocalizations.of(context)!.start_activity,
+                    icon: Icons.list,
+                    text: 'List',
                   ),
                   GButton(
-                    icon: Icons.list,
-                    text: AppLocalizations.of(context)!.list,
+                    icon: Icons.map,
+                    text: 'Map',
                   ),
                   GButton(
                     icon: Icons.bar_chart,
-                    text: AppLocalizations.of(context)!.statistics,
+                    text: 'Statistics',
                   ),
                   GButton(
                     icon: Icons.settings,
-                    text: AppLocalizations.of(context)!.settings,
+                    text: 'Settings',
                   ),
                 ],
               ),

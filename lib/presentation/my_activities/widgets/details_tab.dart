@@ -1,13 +1,13 @@
-import 'package:flutter/material.dart';
-import 'package:flutter_map/flutter_map.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:intl/intl.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:flutter_map/flutter_map.dart';
 
 import '../../../domain/entities/activity.dart';
 import '../../../domain/entities/enum/activity_type.dart';
 import '../../common/core/utils/activity_utils.dart';
 import '../../common/core/utils/color_utils.dart';
-import '../../common/core/utils/ui_utils.dart';
 import '../../common/core/widgets/date.dart';
 import '../../common/core/widgets/share_map_button.dart';
 import '../../common/location/widgets/location_map.dart';
@@ -20,6 +20,65 @@ class DetailsTab extends HookConsumerWidget {
   final Activity activity;
 
   const DetailsTab({super.key, required this.activity});
+
+  Widget _buildDateTimeInfo(Activity activity) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        children: [
+          _buildDateTimeItem(
+            icon: Icons.play_arrow,
+            label: 'Início',
+            dateTime: activity.startDatetime,
+          ),
+          _buildDateTimeItem(
+            icon: Icons.stop,
+            label: 'Término',
+            dateTime: activity.endDatetime,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDateTimeItem({
+    required IconData icon,
+    required String label,
+    required DateTime dateTime,
+  }) {
+    final timeFormat = DateFormat('HH:mm:ss');
+    final dateFormat = DateFormat('dd/MM/yyyy');
+
+    return Column(
+      children: [
+        Icon(icon, color: Colors.blueGrey, size: 24),
+        const SizedBox(height: 4),
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 12,
+            color: Colors.grey,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        Text(
+          timeFormat.format(dateTime),
+          style: const TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        Text(
+          dateFormat.format(dateTime),
+          style: const TextStyle(
+            fontSize: 12,
+            color: Colors.grey,
+          ),
+        ),
+      ],
+    );
+  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -92,7 +151,9 @@ class DetailsTab extends HookConsumerWidget {
                 ])
               : Container(),
           Date(date: displayedActivity.startDatetime),
-          const SizedBox(height: 30),
+          const SizedBox(height: 10),
+          _buildDateTimeInfo(displayedActivity),
+          const SizedBox(height: 20),
           Center(
             child: TimerText(timeInMs: displayedActivity.time.toInt()),
           ),
@@ -100,6 +161,10 @@ class DetailsTab extends HookConsumerWidget {
           Metrics(
             distance: displayedActivity.distance,
             speed: displayedActivity.speed,
+            cadence: displayedActivity.cadence,
+            calories: displayedActivity.calories,
+            power: displayedActivity.power,
+            altitude: displayedActivity.altitude,
           ),
           Expanded(
             child: SizedBox(
@@ -144,11 +209,6 @@ class DetailsTab extends HookConsumerWidget {
                   child: ShareMapButton(
                       activity: displayedActivity,
                       boundaryKey: state.boundaryKey),
-                ),
-                Positioned(
-                  bottom: 16,
-                  left: 80,
-                  child: UIUtils.createBackButton(context),
                 ),
               ],
             ),

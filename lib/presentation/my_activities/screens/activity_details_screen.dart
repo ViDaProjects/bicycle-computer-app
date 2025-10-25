@@ -2,13 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:be_for_bike/l10n/app_localizations.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
-import 'package:quickalert/models/quickalert_type.dart';
-import 'package:quickalert/widgets/quickalert_dialog.dart';
+import 'package:google_nav_bar/google_nav_bar.dart';
 
 import '../../../domain/entities/activity.dart';
 import '../../common/core/utils/activity_utils.dart';
 import '../../common/core/utils/color_utils.dart';
 import '../../common/core/utils/ui_utils.dart';
+import '../../home/view_model/home_view_model.dart';
 import '../view_model/activity_details_view_model.dart';
 import '../widgets/details_tab.dart';
 import '../widgets/graph_tab.dart';
@@ -22,7 +22,8 @@ class ActivityDetailsScreen extends HookConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(activityDetailsViewModelProvider);
-    final provider = ref.read(activityDetailsViewModelProvider.notifier);
+    final homeViewModel = ref.read(homeViewModelProvider.notifier);
+    final homeState = ref.watch(homeViewModelProvider);
 
     final tabController = useTabController(initialLength: 2);
 
@@ -47,44 +48,6 @@ class ActivityDetailsScreen extends HookConsumerWidget {
                               fontWeight: FontWeight.bold),
                         ),
                         const Spacer(),
-                        IconButton(
-                          color: ColorUtils.black,
-                          tooltip: 'Edit',
-                          onPressed: () {
-                            tabController.animateTo(0);
-                            provider.editType();
-                          },
-                          icon: Icon(
-                            Icons.edit,
-                            color: ColorUtils.blueGrey,
-                          ),
-                        ),
-                        IconButton(
-                          color: ColorUtils.black,
-                          tooltip: 'Remove',
-                          onPressed: () {
-                            QuickAlert.show(
-                                context: context,
-                                type: QuickAlertType.confirm,
-                                title: AppLocalizations.of(context)!
-                                    .ask_activity_removal,
-                                confirmBtnText:
-                                    AppLocalizations.of(context)!.delete,
-                                cancelBtnText:
-                                    AppLocalizations.of(context)!.cancel,
-                                confirmBtnColor: ColorUtils.red,
-                                onCancelBtnTap: () =>
-                                    Navigator.of(context).pop(),
-                                onConfirmBtnTap: () {
-                                  Navigator.of(context).pop();
-                                  provider.removeActivity(displayedActivity);
-                                });
-                          },
-                          icon: Icon(
-                            Icons.delete,
-                            color: ColorUtils.red,
-                          ),
-                        )
                       ]),
                     ),
                     Expanded(
@@ -109,7 +72,42 @@ class ActivityDetailsScreen extends HookConsumerWidget {
                                     children: [
                                       DetailsTab(activity: activity),
                                       GraphTab(activity: activity)
-                                    ]))))
+                                    ])))),
+                    Container(
+                        color: ColorUtils.mainMedium,
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 20),
+                          child: GNav(
+                            backgroundColor: ColorUtils.mainMedium,
+                            color: ColorUtils.white,
+                            activeColor: ColorUtils.white,
+                            tabBackgroundColor: ColorUtils.mainDarker,
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
+                            selectedIndex: homeState.currentIndex,
+                            onTabChange: (value) {
+                              homeViewModel.setCurrentIndex(value);
+                            },
+                            gap: 4,
+                            tabs: const [
+                              GButton(
+                                icon: Icons.list,
+                                text: 'Lista',
+                              ),
+                              GButton(
+                                icon: Icons.map,
+                                text: 'Mapa',
+                              ),
+                              GButton(
+                                icon: Icons.bar_chart,
+                                text: 'Estatísticas',
+                              ),
+                              GButton(
+                                icon: Icons.settings,
+                                text: 'Configurações',
+                              ),
+                            ],
+                          ),
+                        ))
                   ])));
   }
 }

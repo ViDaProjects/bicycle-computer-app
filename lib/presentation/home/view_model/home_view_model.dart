@@ -1,5 +1,6 @@
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
+import '../../../domain/entities/activity.dart';
 import 'state/home_state.dart';
 
 final homeViewModelProvider =
@@ -21,5 +22,10 @@ class HomeViewModel extends StateNotifier<HomeState> {
   /// Sets the current index value to the specified [index].
   void setCurrentIndex(int index) {
     state = state.copyWith(currentIndex: index);
+  }
+
+  /// Sets the selected activity.
+  void setSelectedActivity(Activity? activity) {
+    state = state.copyWith(selectedActivity: activity);
   }
 }

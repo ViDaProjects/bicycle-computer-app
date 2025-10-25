@@ -25,6 +25,18 @@ class Activity extends Equatable {
   /// The average speed in the activity.
   final double speed;
 
+  /// The average cadence in the activity.
+  final double cadence;
+
+  /// The calories burned in the activity.
+  final double calories;
+
+  /// The average power in the activity.
+  final double power;
+
+  /// The altitude gain in the activity.
+  final double altitude;
+
   /// The total time of the activity.
   final double time;
 
@@ -51,6 +63,10 @@ class Activity extends Equatable {
       required this.endDatetime,
       required this.distance,
       required this.speed,
+      required this.cadence,
+      required this.calories,
+      required this.power,
+      required this.altitude,
       required this.time,
       required this.locations,
       required this.user,
@@ -70,6 +86,10 @@ class Activity extends Equatable {
         endDatetime: endDatetime,
         distance: distance,
         speed: speed,
+        cadence: cadence,
+        calories: calories,
+        power: power,
+        altitude: altitude,
         time: time,
         locations: locations,
         user: user,
@@ -86,6 +106,10 @@ class Activity extends Equatable {
         endDatetime,
         distance,
         speed,
+        cadence,
+        calories,
+        power,
+        altitude,
         time,
         ...locations,
         user,

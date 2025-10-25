@@ -44,6 +44,18 @@ class ActivityResponse extends Equatable {
   /// has current user liked ?
   final bool hasCurrentUserLiked;
 
+  /// The average cadence of the activity.
+  final double cadence;
+
+  /// The calories burned during the activity.
+  final double calories;
+
+  /// The average power output during the activity.
+  final double power;
+
+  /// The altitude gain during the activity.
+  final double altitude;
+
   /// The list of comments
   final Iterable<ActivityCommentResponse> comments;
 
@@ -56,6 +68,10 @@ class ActivityResponse extends Equatable {
       required this.distance,
       required this.speed,
       required this.time,
+      required this.cadence,
+      required this.calories,
+      required this.power,
+      required this.altitude,
       required this.locations,
       required this.user,
       required this.likesCount,
@@ -71,6 +87,10 @@ class ActivityResponse extends Equatable {
         distance,
         speed,
         time,
+        cadence,
+        calories,
+        power,
+        altitude,
         ...locations,
         user,
         likesCount,
@@ -96,6 +116,18 @@ class ActivityResponse extends Equatable {
           ? double.parse(map['speed'])
           : map['speed'].toDouble(),
       time: map['time'].toDouble(),
+      cadence: map['cadence'] is String
+          ? double.parse(map['cadence'])
+          : map['cadence'].toDouble(),
+      calories: map['calories'] is String
+          ? double.parse(map['calories'])
+          : map['calories'].toDouble(),
+      power: map['power'] is String
+          ? double.parse(map['power'])
+          : map['power'].toDouble(),
+      altitude: map['altitude'] is String
+          ? double.parse(map['altitude'])
+          : map['altitude'].toDouble(),
       likesCount: map['likesCount'].toDouble(),
       hasCurrentUserLiked: map['hasCurrentUserLiked'],
       locations: (map['locations'] as List<dynamic>)
@@ -141,6 +173,10 @@ class ActivityResponse extends Equatable {
         distance: distance,
         speed: speed,
         time: time,
+        cadence: cadence,
+        calories: calories,
+        power: power,
+        altitude: altitude,
         locations: activityLocations,
         likesCount: likesCount,
         hasCurrentUserLiked: hasCurrentUserLiked,

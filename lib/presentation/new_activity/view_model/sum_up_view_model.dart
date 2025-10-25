@@ -94,6 +94,10 @@ class SumUpViewModel extends StateNotifier<SumUpState> {
         distance: distance,
         speed: speed,
         time: differenceInMilliseconds,
+        cadence: 0.0,
+        calories: 0.0,
+        power: 0.0,
+        altitude: 0.0,
         likesCount: 0,
         hasCurrentUserLiked: false,
         locations: locations

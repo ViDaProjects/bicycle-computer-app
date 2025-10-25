@@ -39,6 +39,7 @@ class LocationMap extends HookConsumerWidget {
             children: [
               TileLayer(
                 urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                userAgentPackageName: 'be_for_bike',
               ),
               PolylineLayer(
                 polylines: [

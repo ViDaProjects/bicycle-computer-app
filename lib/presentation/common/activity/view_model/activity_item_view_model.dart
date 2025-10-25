@@ -4,8 +4,10 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import '../../../../data/repositories/activity_repository_impl.dart';
 import '../../../../domain/entities/activity.dart';
 import '../../../../main.dart';
+import '../../../home/view_model/home_view_model.dart';
 import '../../../my_activities/screens/activity_details_screen.dart';
 import '../../../my_activities/view_model/activity_list_view_model.dart';
+import '../../../statistics/screens/statistics_screen.dart';
 import '../../user/view_model/profile_picture_view_model.dart';
 import 'state/activity_item_state.dart';
 
@@ -66,6 +68,27 @@ class ActivityItemViewModel extends StateNotifier<ActivityItemState> {
             end: Offset.zero,
           ).animate(animation),
           child: ActivityDetailsScreen(activity: activityDetails),
+        ),
+      ),
+    );
+  }
+
+  /// Navigates to the statistics screen and sets the selected activity.
+  void goToStatistics(Activity activityDetails) {
+    // Set the selected activity in the home view model
+    ref.read(homeViewModelProvider.notifier).setSelectedActivity(activityDetails);
+
+    // Navigate to the statistics screen
+    navigatorKey.currentState?.push(
+      PageRouteBuilder(
+        transitionDuration: const Duration(milliseconds: 500),
+        pageBuilder: (context, animation, secondaryAnimation) =>
+            SlideTransition(
+          position: Tween<Offset>(
+            begin: const Offset(1.0, 0.0),
+            end: Offset.zero,
+          ).animate(animation),
+          child: StatisticsScreen(),
         ),
       ),
     );

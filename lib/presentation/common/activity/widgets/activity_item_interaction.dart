@@ -5,6 +5,7 @@ import '../../../../domain/entities/activity.dart';
 import '../../core/utils/color_utils.dart';
 import '../view_model/activity_item_comments_view_model.dart';
 import '../view_model/activity_item_interaction_view_model.dart';
+import '../view_model/activity_item_view_model.dart';
 import 'activity_comments.dart';
 import 'activty_like.dart';
 
@@ -42,6 +43,16 @@ class ActivityItemInteraction extends HookConsumerWidget {
                     onPressed: () => provider.toggleComments(),
                   ),
                   Text(commentsState.comments.length.toString()),
+                  const SizedBox(width: 16),
+                  IconButton(
+                    icon: Icon(Icons.bar_chart,
+                        color: ColorUtils.black, size: 24),
+                    onPressed: () {
+                      final activityProvider = ref.read(
+                          activityItemViewModelProvider(currentActivity.id).notifier);
+                      activityProvider.goToStatistics(currentActivity);
+                    },
+                  ),
                 ],
               ),
               ActivityLike(currentActivity: currentActivity),
