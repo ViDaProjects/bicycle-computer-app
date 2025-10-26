@@ -10,12 +10,28 @@ jobs:
 
     steps:
     - name: Checkout code
-      uses: actions/checkout@v2
+      uses: actions/checkout@v4
+
+    - name: Setup Java
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'temurin'
+        java-version: '24'
 
     - name: Setup Flutter
       uses: subosito/flutter-action@v2
       with: 
-        flutter-version: '3.24.0'
+        flutter-version: '3.35.7'
+        channel: 'stable'
+
+    - name: Cache Flutter dependencies
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/.pub-cache
+        key: ${{ runner.os }}-flutter-${{ hashFiles('**/pubspec.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-flutter-
 
     - name: Install dependencies
       run: flutter pub get
@@ -25,7 +41,7 @@ jobs:
       run: flutter build apk --release
 
     - name: Upload APK
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v4
       with:
-        name: run-flutter-run.apk
+        name: release.apk
         path: build/app/outputs/flutter-apk/app-release.apk

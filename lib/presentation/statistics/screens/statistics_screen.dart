@@ -147,8 +147,8 @@ class StatisticsScreen extends HookConsumerWidget {
     final maxY = _calculateNiceMax(maxValue);
 
     return Container(
-      height: 200,
-      padding: const EdgeInsets.all(16),
+      height: 280,
+      padding: const EdgeInsets.symmetric(vertical: 16),
       decoration: BoxDecoration(
         color: ColorUtils.white,
         borderRadius: BorderRadius.circular(12),
@@ -162,7 +162,7 @@ class StatisticsScreen extends HookConsumerWidget {
         ],
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Text(
             title,
@@ -170,7 +170,6 @@ class StatisticsScreen extends HookConsumerWidget {
               fontSize: 16,
               fontWeight: FontWeight.bold,
             ),
-            textAlign: TextAlign.center,
           ),
           const SizedBox(height: 16),
           Expanded(
@@ -181,7 +180,7 @@ class StatisticsScreen extends HookConsumerWidget {
                     leftTitles: AxisTitles(
                       sideTitles: SideTitles(
                         showTitles: true,
-                        reservedSize: 60, // Increased from 50 to 60 for more space
+                        reservedSize: 45, // Reduced from 60 to 45 for less empty space
                         getTitlesWidget: (value, meta) {
                           return Padding(
                             padding: const EdgeInsets.only(right: 8), // Add padding between Y-axis labels and chart
@@ -203,7 +202,7 @@ class StatisticsScreen extends HookConsumerWidget {
                   bottomTitles: AxisTitles(
                     sideTitles: SideTitles(
                       showTitles: true,
-                      reservedSize: 60, // Increased for vertical text
+                      reservedSize: 40, // Reduced from 60 to 40 for less empty space
                       getTitlesWidget: (value, meta) {
                         final dateTime = DateTime.fromMillisecondsSinceEpoch(value.toInt());
                         final format = DateFormat('HH:mm');
