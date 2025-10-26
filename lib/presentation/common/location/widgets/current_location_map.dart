@@ -53,7 +53,7 @@ class CurrentLocationMap extends HookConsumerWidget {
               shape: BoxShape.circle,
               border: Border.all(color: Colors.white, width: 2),
             ),
-            child: Icon(
+            child: const Icon(
               Icons.my_location,
               size: 20,
               color: Colors.white,

@@ -6,6 +6,9 @@ class SettingsState {
   final bool showCadenceChart;
   final bool showPowerChart;
   final bool showAltitudeChart;
+  final bool showDistanceTraveled;
+  final bool showCalories;
+  final bool showMap;
 
   /// Represents the state of the settings screen.
   ///
@@ -16,6 +19,9 @@ class SettingsState {
   /// [showCadenceChart] indicates whether to show cadence chart.
   /// [showPowerChart] indicates whether to show power chart.
   /// [showAltitudeChart] indicates whether to show altitude chart.
+  /// [showDistanceTraveled] indicates whether to show distance traveled.
+  /// [showCalories] indicates whether to show calories.
+  /// [showMap] indicates whether to show map.
   const SettingsState({
     required this.isLoading,
     required this.isBluetoothEnabled,
@@ -24,6 +30,9 @@ class SettingsState {
     required this.showCadenceChart,
     required this.showPowerChart,
     required this.showAltitudeChart,
+    required this.showDistanceTraveled,
+    required this.showCalories,
+    required this.showMap,
   });
 
   /// Creates an initial state for the settings screen.
@@ -36,6 +45,9 @@ class SettingsState {
       showCadenceChart: true,
       showPowerChart: true,
       showAltitudeChart: true,
+      showDistanceTraveled: true,
+      showCalories: true,
+      showMap: true,
     );
   }
 
@@ -48,6 +60,9 @@ class SettingsState {
     bool? showCadenceChart,
     bool? showPowerChart,
     bool? showAltitudeChart,
+    bool? showDistanceTraveled,
+    bool? showCalories,
+    bool? showMap,
   }) {
     return SettingsState(
       isLoading: isLoading ?? this.isLoading,
@@ -57,6 +72,9 @@ class SettingsState {
       showCadenceChart: showCadenceChart ?? this.showCadenceChart,
       showPowerChart: showPowerChart ?? this.showPowerChart,
       showAltitudeChart: showAltitudeChart ?? this.showAltitudeChart,
+      showDistanceTraveled: showDistanceTraveled ?? this.showDistanceTraveled,
+      showCalories: showCalories ?? this.showCalories,
+      showMap: showMap ?? this.showMap,
     );
   }
 }

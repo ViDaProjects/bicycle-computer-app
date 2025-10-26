@@ -4,11 +4,8 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:latlong2/latlong.dart';
 
-import '../../../domain/entities/enum/activity_type.dart';
-import '../../common/core/utils/activity_utils.dart';
 import '../../common/core/utils/color_utils.dart';
 import '../../common/core/utils/ui_utils.dart';
-import '../../common/core/widgets/share_map_button.dart';
 import '../../common/location/view_model/location_view_model.dart';
 import '../../common/location/widgets/location_map.dart';
 import '../../common/metrics/widgets/metrics.dart';
@@ -22,8 +19,6 @@ class SumUpScreen extends HookConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(sumUpViewModelProvider);
-    final provider = ref.read(sumUpViewModelProvider.notifier);
-    ActivityType selectedType = state.type;
 
     final locations = ref.read(locationViewModelProvider).savedPositions;
 
@@ -88,8 +83,6 @@ class SumUpScreen extends HookConsumerWidget {
                   UIUtils.createHeader(
                       AppLocalizations.of(context)!.activity_sumup),
                   const SizedBox(height: 10),
-                  ActivityUtils.buildActivityTypeDropdown(
-                      context, selectedType, provider),
                   const TimerTextSized(),
                   const Metrics(),
                   const SizedBox(height: 10),
@@ -121,13 +114,6 @@ class SumUpScreen extends HookConsumerWidget {
             bottom: 16,
             right: 80,
             child: SaveButton(disabled: state.isSaving),
-          ),
-          Positioned(
-            bottom: 16,
-            left: 80,
-            child: ShareMapButton(
-                activity: provider.getActivity(),
-                boundaryKey: state.boundaryKey),
           ),
         ],
       ),

@@ -9,7 +9,6 @@ import '../../../data/model/request/activity_request.dart';
 import '../../../data/model/request/location_request.dart';
 import '../../../data/repositories/activity_repository_impl.dart';
 import '../../../domain/entities/activity.dart';
-import '../../../domain/entities/enum/activity_type.dart';
 import '../../../main.dart';
 import '../../common/core/utils/activity_utils.dart';
 import '../../home/screens/home_screen.dart';
@@ -52,7 +51,6 @@ class ActivityDetailsViewModel extends StateNotifier<ActivityDetailsState> {
         .then((value) {
       final activityWithoutLocations = Activity(
           id: activity.id,
-          type: activity.type,
           distance: activity.distance,
           speed: activity.speed,
           startDatetime: activity.startDatetime,
@@ -62,11 +60,7 @@ class ActivityDetailsViewModel extends StateNotifier<ActivityDetailsState> {
           calories: activity.calories,
           power: activity.power,
           altitude: activity.altitude,
-          likesCount: activity.likesCount,
-          hasCurrentUserLiked: activity.hasCurrentUserLiked,
-          locations: const [],
-          user: activity.user,
-          comments: activity.comments);
+          locations: const []);
       ActivityUtils.updateActivity(
           ref, activityWithoutLocations, ActivityUpdateActionEnum.remove);
 
@@ -77,11 +71,6 @@ class ActivityDetailsViewModel extends StateNotifier<ActivityDetailsState> {
     }).catchError((error) {
       state = state.copyWith(isLoading: true);
     });
-  }
-
-  /// Sets the selected [type] of the activity.
-  void setType(ActivityType type) {
-    state = state.copyWith(type: type);
   }
 
   /// Sets the mode to edit the activity.
@@ -97,7 +86,6 @@ class ActivityDetailsViewModel extends StateNotifier<ActivityDetailsState> {
         .read(activityRepositoryProvider)
         .editActivity(ActivityRequest(
             id: activity.id,
-            type: state.type ?? activity.type,
             startDatetime: activity.startDatetime,
             endDatetime: activity.endDatetime,
             distance: activity.distance,

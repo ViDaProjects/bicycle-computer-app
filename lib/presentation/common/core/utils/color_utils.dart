@@ -78,8 +78,8 @@ class ColorUtils {
     final normalized = (calories / 1000).clamp(0.0, 1.0);
 
     // Interpolate between orange and yellow
-    final orange = Colors.orange;
-    final yellow = Colors.yellow.shade600;
+    const orange = Colors.orange;
+    const yellow = Color(0xFFFFD600); // Colors.yellow.shade600
 
     return Color.lerp(orange, yellow, normalized)!;
   }
@@ -92,16 +92,16 @@ class ColorUtils {
     final normalized = (calories / 2000).clamp(0.0, 1.0);
 
     // Very light colors with smooth transition from light blue to light orange
-    final lightBlue = Colors.blue.shade50.withOpacity(0.25); // Very light blue for very low calories
-    final lightBlueMedium = Colors.blue.shade100.withOpacity(0.3);
-    final lightCyan = Colors.cyan.shade50.withOpacity(0.25); // Light cyan for low-medium calories
-    final lightCyanMedium = Colors.cyan.shade100.withOpacity(0.3);
-    final lightGreen = Colors.lightGreen.shade50.withOpacity(0.25); // Light green for medium calories
-    final lightGreenMedium = Colors.lightGreen.shade100.withOpacity(0.3);
-    final lightYellow = Colors.yellow.shade50.withOpacity(0.25); // Light yellow for medium-high calories
-    final lightYellowMedium = Colors.yellow.shade100.withOpacity(0.3);
-    final lightOrange = Colors.orange.shade50.withOpacity(0.25); // Light orange for high calories
-    final lightOrangeMedium = Colors.orange.shade100.withOpacity(0.3);
+    final lightBlue = Colors.blue.shade50.withValues(alpha: 0.25); // Very light blue for very low calories
+    final lightBlueMedium = Colors.blue.shade100.withValues(alpha: 0.3);
+    final lightCyan = Colors.cyan.shade50.withValues(alpha: 0.25); // Light cyan for low-medium calories
+    final lightCyanMedium = Colors.cyan.shade100.withValues(alpha: 0.3);
+    final lightGreen = Colors.lightGreen.shade50.withValues(alpha: 0.25); // Light green for medium calories
+    final lightGreenMedium = Colors.lightGreen.shade100.withValues(alpha: 0.3);
+    final lightYellow = Colors.yellow.shade50.withValues(alpha: 0.25); // Light yellow for medium-high calories
+    final lightYellowMedium = Colors.yellow.shade100.withValues(alpha: 0.3);
+    final lightOrange = Colors.orange.shade50.withValues(alpha: 0.25); // Light orange for high calories
+    final lightOrangeMedium = Colors.orange.shade100.withValues(alpha: 0.3);
 
     // Create smooth gradient transitions based on calorie ranges
     Color startColor, endColor;

@@ -26,12 +26,22 @@ class SettingsScreen extends HookConsumerWidget {
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Text(
-                          'Bluetooth',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w500,
-                          ),
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.bluetooth,
+                              color: ColorUtils.main,
+                              size: 24,
+                            ),
+                            const SizedBox(width: 12),
+                            const Text(
+                              'Bicycle BLE connection',
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
                         ),
                         CupertinoSwitch(
                           value: state.isBluetoothEnabled,
@@ -47,12 +57,22 @@ class SettingsScreen extends HookConsumerWidget {
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Text(
-                          'Dark Mode',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w500,
-                          ),
+                        Row(
+                          children: [
+                            Icon(
+                              state.isDarkMode ? Icons.nightlight_round : Icons.wb_sunny,
+                              color: ColorUtils.main,
+                              size: 24,
+                            ),
+                            const SizedBox(width: 12),
+                            const Text(
+                              'Dark Mode',
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
                         ),
                         CupertinoSwitch(
                           value: state.isDarkMode,
@@ -66,7 +86,7 @@ class SettingsScreen extends HookConsumerWidget {
                   const Padding(
                     padding: EdgeInsets.symmetric(horizontal: 16.0),
                     child: Text(
-                      'Chart Visibility',
+                      'Bicycle computer visibility',
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
@@ -79,16 +99,26 @@ class SettingsScreen extends HookConsumerWidget {
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Text(
-                          'Speed Chart',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w400,
-                          ),
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.speed,
+                              color: ColorUtils.main,
+                              size: 20,
+                            ),
+                            const SizedBox(width: 12),
+                            const Text(
+                              'Speed',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w400,
+                              ),
+                            ),
+                          ],
                         ),
                         CupertinoSwitch(
                           value: state.showSpeedChart,
-                          onChanged: (value) => provider.toggleSpeedChart(),
+                          onChanged: null, // Disabled - for future Raspberry Pi control
                           activeTrackColor: ColorUtils.main,
                         ),
                       ],
@@ -100,16 +130,26 @@ class SettingsScreen extends HookConsumerWidget {
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Text(
-                          'Cadence Chart',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w400,
-                          ),
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.pedal_bike,
+                              color: ColorUtils.main,
+                              size: 20,
+                            ),
+                            const SizedBox(width: 12),
+                            const Text(
+                              'Cadence',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w400,
+                              ),
+                            ),
+                          ],
                         ),
                         CupertinoSwitch(
                           value: state.showCadenceChart,
-                          onChanged: (value) => provider.toggleCadenceChart(),
+                          onChanged: null, // Disabled - for future Raspberry Pi control
                           activeTrackColor: ColorUtils.main,
                         ),
                       ],
@@ -121,16 +161,26 @@ class SettingsScreen extends HookConsumerWidget {
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Text(
-                          'Power Chart',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w400,
-                          ),
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.flash_on,
+                              color: ColorUtils.main,
+                              size: 20,
+                            ),
+                            const SizedBox(width: 12),
+                            const Text(
+                              'Power',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w400,
+                              ),
+                            ),
+                          ],
                         ),
                         CupertinoSwitch(
                           value: state.showPowerChart,
-                          onChanged: (value) => provider.togglePowerChart(),
+                          onChanged: null, // Disabled - for future Raspberry Pi control
                           activeTrackColor: ColorUtils.main,
                         ),
                       ],
@@ -142,16 +192,119 @@ class SettingsScreen extends HookConsumerWidget {
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Text(
-                          'Altitude Chart',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w400,
-                          ),
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.terrain,
+                              color: ColorUtils.main,
+                              size: 20,
+                            ),
+                            const SizedBox(width: 12),
+                            const Text(
+                              'Altitude',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w400,
+                              ),
+                            ),
+                          ],
                         ),
                         CupertinoSwitch(
                           value: state.showAltitudeChart,
-                          onChanged: (value) => provider.toggleAltitudeChart(),
+                          onChanged: null, // Disabled - for future Raspberry Pi control
+                          activeTrackColor: ColorUtils.main,
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.straighten,
+                              color: ColorUtils.main,
+                              size: 20,
+                            ),
+                            const SizedBox(width: 12),
+                            const Text(
+                              'Distance traveled',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w400,
+                              ),
+                            ),
+                          ],
+                        ),
+                        CupertinoSwitch(
+                          value: state.showDistanceTraveled,
+                          onChanged: null, // Disabled - for future Raspberry Pi control
+                          activeTrackColor: ColorUtils.main,
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.local_fire_department,
+                              color: ColorUtils.main,
+                              size: 20,
+                            ),
+                            const SizedBox(width: 12),
+                            const Text(
+                              'Calories',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w400,
+                              ),
+                            ),
+                          ],
+                        ),
+                        CupertinoSwitch(
+                          value: state.showCalories,
+                          onChanged: null, // Disabled - for future Raspberry Pi control
+                          activeTrackColor: ColorUtils.main,
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.map,
+                              color: ColorUtils.main,
+                              size: 20,
+                            ),
+                            const SizedBox(width: 12),
+                            const Text(
+                              'Map',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w400,
+                              ),
+                            ),
+                          ],
+                        ),
+                        CupertinoSwitch(
+                          value: state.showMap,
+                          onChanged: null, // Disabled - map functionality removed
                           activeTrackColor: ColorUtils.main,
                         ),
                       ],

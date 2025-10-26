@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:be_for_bike/l10n/app_localizations.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:google_nav_bar/google_nav_bar.dart';
 
 import '../../../domain/entities/activity.dart';
-import '../../common/core/utils/activity_utils.dart';
 import '../../common/core/utils/color_utils.dart';
 import '../../common/core/utils/ui_utils.dart';
 import '../../home/view_model/home_view_model.dart';
@@ -27,8 +25,6 @@ class ActivityDetailsScreen extends HookConsumerWidget {
 
     final tabController = useTabController(initialLength: 2);
 
-    final displayedActivity = state.activity ?? activity;
-
     return Scaffold(
         body: SafeArea(
             child: state.isLoading
@@ -38,10 +34,7 @@ class ActivityDetailsScreen extends HookConsumerWidget {
                       padding: const EdgeInsets.only(left: 25, top: 12),
                       child: Row(children: [
                         Text(
-                          ActivityUtils.translateActivityTypeValue(
-                            AppLocalizations.of(context)!,
-                            displayedActivity.type,
-                          ),
+                          'Cycling',
                           style: TextStyle(
                               color: ColorUtils.blueGrey,
                               fontSize: 28,

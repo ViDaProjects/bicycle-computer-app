@@ -3,7 +3,6 @@ import 'package:be_for_bike/l10n/app_localizations.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../domain/entities/activity.dart';
-import '../../core/utils/activity_utils.dart';
 import '../../core/utils/color_utils.dart';
 
 class ActivityItemDetails extends StatelessWidget {
@@ -22,29 +21,31 @@ class ActivityItemDetails extends StatelessWidget {
       AppLocalizations appLocalizations,
       String formattedDate,
       String formattedTime) {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           '${appLocalizations.date_pronoun} $formattedDate ${appLocalizations.hours_pronoun} $formattedTime',
-          style: TextStyle(color: ColorUtils.greyDarker, fontFamily: 'Avenir'),
+          style: TextStyle(color: isDarkMode ? Colors.white70 : ColorUtils.greyDarker, fontFamily: 'Avenir'),
         ),
         const SizedBox(height: 8),
         buildDetailRow(
-            Icons.straighten, '${activity.distance.toStringAsFixed(2)} km'),
+            Icons.straighten, '${activity.distance.toStringAsFixed(2)} km', isDarkMode),
         buildDetailRow(
-            Icons.local_fire_department, '${activity.calories.toStringAsFixed(0)} kcal'),
+            Icons.local_fire_department, '${activity.calories.toStringAsFixed(0)} kcal', isDarkMode),
       ],
     );
   }
 
-  Widget buildDetailRow(IconData icon, String text) {
+  Widget buildDetailRow(IconData icon, String text, bool isDarkMode) {
     return Row(
       children: [
-        Icon(icon, color: ColorUtils.grey, size: 16),
+        Icon(icon, color: isDarkMode ? Colors.white60 : ColorUtils.grey, size: 16),
         const SizedBox(width: 8),
         Text(text,
-            style: TextStyle(color: ColorUtils.grey, fontFamily: 'Avenir')),
+            style: TextStyle(color: isDarkMode ? Colors.white60 : ColorUtils.grey, fontFamily: 'Avenir')),
       ],
     );
   }
@@ -55,6 +56,7 @@ class ActivityItemDetails extends StatelessWidget {
         DateFormat('dd/MM/yyyy').format(activity.startDatetime);
     final formattedTime = DateFormat('HH:mm').format(activity.startDatetime);
     final appLocalizations = AppLocalizations.of(context)!;
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
     return Padding(
       padding: EdgeInsets.only(left: displayUserName ? 30 : 0),
@@ -66,12 +68,9 @@ class ActivityItemDetails extends StatelessWidget {
             children: [
               Expanded(
                 child: Text(
-                  ActivityUtils.translateActivityTypeValue(
-                    appLocalizations,
-                    activity.type,
-                  ).toUpperCase(),
+                  'CYCLING',
                   style: TextStyle(
-                    color: Colors.black,
+                    color: isDarkMode ? Colors.white : Colors.black,
                     fontFamily: 'Avenir',
                     fontWeight: FontWeight.bold,
                   ),

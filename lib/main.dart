@@ -106,15 +106,79 @@ class MyApp extends HookConsumerWidget {
             BottomSheetThemeData(backgroundColor: ColorUtils.transparent),
       ),
       darkTheme: ThemeData.dark().copyWith(
+        // VS Code Dark Theme colors
+        scaffoldBackgroundColor: const Color(0xFF1e1e1e),
+        cardColor: const Color(0xFF252526),
+        canvasColor: const Color(0xFF1e1e1e),
+
+        // Dialog theme
+        dialogTheme: const DialogThemeData(
+          backgroundColor: Color(0xFF252526),
+        ),
+
+        // App bar and navigation
+        appBarTheme: const AppBarTheme(
+          backgroundColor: Color(0xFF323233),
+          foregroundColor: Color(0xFFcccccc),
+          elevation: 0,
+        ),
+
+        // Cards and surfaces
+        cardTheme: CardThemeData(
+          color: const Color(0xFF252526),
+          elevation: 2,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(8),
+          ),
+          shadowColor: Colors.black.withValues(alpha: 0.3),
+        ),
+
+        // Text colors
+        textTheme: const TextTheme(
+          bodyLarge: TextStyle(color: Color(0xFFcccccc)),
+          bodyMedium: TextStyle(color: Color(0xFFcccccc)),
+          titleMedium: TextStyle(color: Color(0xFFcccccc)),
+          titleSmall: TextStyle(color: Color(0xFFcccccc)),
+          labelLarge: TextStyle(color: Color(0xFFcccccc)),
+        ),
+
+        // Input and selection
         textSelectionTheme: TextSelectionThemeData(
           cursorColor: ColorUtils.main,
-          selectionColor: ColorUtils.main,
+          selectionColor: ColorUtils.main.withValues(alpha: 0.3),
           selectionHandleColor: ColorUtils.main,
         ),
+
+        // Buttons and interactions
+        elevatedButtonTheme: ElevatedButtonThemeData(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: const Color(0xFF0e639c),
+            foregroundColor: const Color(0xFFcccccc),
+          ),
+        ),
+
+        // Icons
+        iconTheme: const IconThemeData(
+          color: Color(0xFFcccccc),
+        ),
+
+        // Dividers and borders
+        dividerColor: const Color(0xFF454545),
+
+        // Expansion tiles
+        expansionTileTheme: const ExpansionTileThemeData(
+          backgroundColor: Color(0xFF252526),
+          collapsedBackgroundColor: Color(0xFF252526),
+          textColor: Color(0xFFcccccc),
+          collapsedTextColor: Color(0xFFcccccc),
+          iconColor: Color(0xFFcccccc),
+          collapsedIconColor: Color(0xFFcccccc),
+        ),
+
         primaryColor: ColorUtils.main,
         splashColor: ColorUtils.blueGreyDarker,
         bottomSheetTheme:
-            BottomSheetThemeData(backgroundColor: ColorUtils.transparent),
+            const BottomSheetThemeData(backgroundColor: Color(0xFF252526)),
       ),
       themeMode: themeMode,
       localizationsDelegates: const [

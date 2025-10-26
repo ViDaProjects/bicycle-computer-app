@@ -3,9 +3,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import '../../../data/model/request/activity_request.dart';
 import '../../../data/repositories/activity_repository_impl.dart';
 import '../../../domain/entities/activity.dart';
-import '../../../domain/entities/enum/activity_type.dart';
 import '../../../domain/entities/location.dart';
-import '../../../domain/entities/user.dart';
 import '../../../main.dart';
 import '../../common/core/utils/activity_utils.dart';
 import '../../common/location/view_model/location_view_model.dart';
@@ -31,11 +29,6 @@ class SumUpViewModel extends StateNotifier<SumUpState> {
   /// Creates a new instance of [SumUpViewModel] with the given [ref].
   SumUpViewModel(this.ref) : super(SumUpState.initial());
 
-  /// Sets the selected [type] of the activity.
-  void setType(ActivityType type) {
-    state = state.copyWith(type: type);
-  }
-
   /// Saves the activity.
   void save() async {
     state = state.copyWith(isSaving: true);
@@ -52,7 +45,6 @@ class SumUpViewModel extends StateNotifier<SumUpState> {
     ref
         .read(activityRepositoryProvider)
         .addActivity(ActivityRequest(
-          type: state.type,
           startDatetime: startDatetime,
           endDatetime: endDatetime,
           distance: ref.read(metricsViewModelProvider).distance,
@@ -88,7 +80,6 @@ class SumUpViewModel extends StateNotifier<SumUpState> {
 
     return Activity(
         id: '',
-        type: state.type,
         startDatetime: startDatetime,
         endDatetime: endDatetime,
         distance: distance,
@@ -98,16 +89,12 @@ class SumUpViewModel extends StateNotifier<SumUpState> {
         calories: 0.0,
         power: 0.0,
         altitude: 0.0,
-        likesCount: 0,
-        hasCurrentUserLiked: false,
         locations: locations
             .map((l) => Location(
                 id: '',
-                datetime: l?.datetime ?? DateTime.now(),
-                latitude: l?.latitude ?? 0,
-                longitude: l?.longitude ?? 0))
-            .toList(),
-        user: const User(id: '', username: '', firstname: '', lastname: ''),
-        comments: const []);
+                datetime: l.datetime,
+                latitude: l.latitude,
+                longitude: l.longitude))
+            .toList());
   }
 }

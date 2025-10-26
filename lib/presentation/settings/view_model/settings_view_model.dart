@@ -38,24 +38,53 @@ class SettingsViewModel extends StateNotifier<SettingsState> {
         state.isDarkMode ? ThemeMode.dark : ThemeMode.light;
   }
 
-  /// Toggles the speed chart visibility.
+  /// Toggles the speed chart visibility (no functionality for now).
   void toggleSpeedChart() {
+    // These toggles are for future Raspberry Pi Bluetooth control
+    // Currently they do nothing in the app
     state = state.copyWith(showSpeedChart: !state.showSpeedChart);
   }
 
-  /// Toggles the cadence chart visibility.
+  /// Toggles the cadence chart visibility (no functionality for now).
   void toggleCadenceChart() {
+    // These toggles are for future Raspberry Pi Bluetooth control
+    // Currently they do nothing in the app
     state = state.copyWith(showCadenceChart: !state.showCadenceChart);
   }
 
-  /// Toggles the power chart visibility.
+  /// Toggles the power chart visibility (no functionality for now).
   void togglePowerChart() {
+    // These toggles are for future Raspberry Pi Bluetooth control
+    // Currently they do nothing in the app
     state = state.copyWith(showPowerChart: !state.showPowerChart);
   }
 
-  /// Toggles the altitude chart visibility.
+  /// Toggles the altitude chart visibility (no functionality for now).
   void toggleAltitudeChart() {
+    // These toggles are for future Raspberry Pi Bluetooth control
+    // Currently they do nothing in the app
     state = state.copyWith(showAltitudeChart: !state.showAltitudeChart);
+  }
+
+  /// Toggles the distance traveled visibility (no functionality for now).
+  void toggleDistanceTraveled() {
+    // These toggles are for future Raspberry Pi Bluetooth control
+    // Currently they do nothing in the app
+    state = state.copyWith(showDistanceTraveled: !state.showDistanceTraveled);
+  }
+
+  /// Toggles the calories visibility (no functionality for now).
+  void toggleCalories() {
+    // These toggles are for future Raspberry Pi Bluetooth control
+    // Currently they do nothing in the app
+    state = state.copyWith(showCalories: !state.showCalories);
+  }
+
+  /// Toggles the map visibility (no functionality for now).
+  void toggleMap() {
+    // These toggles are for future Raspberry Pi Bluetooth control
+    // Currently they do nothing in the app
+    state = state.copyWith(showMap: !state.showMap);
   }
 
   /// Deletes the user account.

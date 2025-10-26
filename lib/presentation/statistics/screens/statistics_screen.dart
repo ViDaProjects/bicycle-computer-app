@@ -94,7 +94,7 @@ class StatisticsScreen extends HookConsumerWidget {
                           ],
                         ),
                         child: const Center(
-                          child: Text('Select an activity to view detailed statistics'),
+                          child: Text('Select an activity from the list to view detailed statistics'),
                         ),
                       ),
                     ],
@@ -106,6 +106,28 @@ class StatisticsScreen extends HookConsumerWidget {
   }
 
   Widget _buildChartCard(String title, String dataType, List<Map<String, dynamic>> data) {
+    if (data.isEmpty) {
+      return Container(
+        height: 200,
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: ColorUtils.white,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.grey.withValues(alpha: 0.1),
+              spreadRadius: 1,
+              blurRadius: 5,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: const Center(
+          child: Text('No data available'),
+        ),
+      );
+    }
+
     final spots = data.map((entry) {
       final timestamp = (entry['timestamp'] as DateTime).millisecondsSinceEpoch.toDouble();
       final value = (entry[dataType] as num?)?.toDouble() ?? 0.0;
@@ -146,9 +168,9 @@ class StatisticsScreen extends HookConsumerWidget {
           Expanded(
             child: LineChart(
               LineChartData(
-                gridData: FlGridData(show: true),
+                gridData: const FlGridData(show: true),
                 titlesData: FlTitlesData(
-                  leftTitles: AxisTitles(
+                  leftTitles: const AxisTitles(
                     sideTitles: SideTitles(showTitles: true, reservedSize: 40),
                   ),
                   bottomTitles: AxisTitles(
@@ -168,10 +190,10 @@ class StatisticsScreen extends HookConsumerWidget {
                       },
                     ),
                   ),
-                  rightTitles: AxisTitles(
+                  rightTitles: const AxisTitles(
                     sideTitles: SideTitles(showTitles: false),
                   ),
-                  topTitles: AxisTitles(
+                  topTitles: const AxisTitles(
                     sideTitles: SideTitles(showTitles: false),
                   ),
                 ),

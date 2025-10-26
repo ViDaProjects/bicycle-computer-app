@@ -5,7 +5,6 @@ import 'package:intl/intl.dart';
 
 import '../../../../domain/entities/activity.dart';
 import '../../../../domain/entities/page.dart';
-import '../../core/utils/color_utils.dart';
 import '../../core/utils/type_utils.dart';
 import '../../core/widgets/infinite_scroll_list.dart';
 import '../view_model/activity_list_view_model.dart';
@@ -109,11 +108,11 @@ class ActivityList extends HookConsumerWidget {
         }
 
         return Theme(
-            data: ThemeData(
+            data: Theme.of(context).copyWith(
               expansionTileTheme: ExpansionTileThemeData(
                 tilePadding: EdgeInsets.zero,
-                iconColor: ColorUtils.black,
-                textColor: ColorUtils.black,
+                iconColor: Theme.of(context).textTheme.bodyLarge?.color,
+                textColor: Theme.of(context).textTheme.bodyLarge?.color,
                 childrenPadding: EdgeInsets.zero,
                 shape: const RoundedRectangleBorder(
                   side: BorderSide.none,
@@ -125,8 +124,9 @@ class ActivityList extends HookConsumerWidget {
                 tilePadding: const EdgeInsets.fromLTRB(15, 0, 15, 0),
                 title: Text(
                   '${_getMonthName(monthActivities.first.startDatetime, AppLocalizations.of(context)!.localeName)} ${monthActivities.first.startDatetime.year}',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontWeight: FontWeight.bold,
+                    color: Theme.of(context).textTheme.bodyLarge?.color,
                   ),
                 ),
                 initiallyExpanded: true,

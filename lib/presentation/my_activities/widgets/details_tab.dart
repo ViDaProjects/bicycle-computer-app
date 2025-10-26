@@ -2,13 +2,8 @@
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:intl/intl.dart';
 
-import 'package:be_for_bike/l10n/app_localizations.dart';
-
 import '../../../domain/entities/activity.dart';
-import '../../../domain/entities/enum/activity_type.dart';
-import '../../common/core/utils/activity_utils.dart';
 import '../../common/core/utils/color_utils.dart';
-import '../../common/core/widgets/share_map_button.dart';
 import '../../common/metrics/widgets/metrics.dart';
 import '../../common/timer/widgets/timer_text.dart';
 import '../view_model/activity_details_view_model.dart';
@@ -84,19 +79,11 @@ class DetailsTab extends HookConsumerWidget {
     final provider = ref.read(activityDetailsViewModelProvider.notifier);
 
     final displayedActivity = state.activity ?? activity;
-    ActivityType selectedType = state.type ?? displayedActivity.type;
 
     return Scaffold(
       body: Column(
         children: [
           const SizedBox(height: 10),
-          state.isEditing
-              ? Column(children: [
-                  ActivityUtils.buildActivityTypeDropdown(
-                      context, selectedType, provider),
-                  const SizedBox(height: 20)
-                ])
-              : Container(),
           const SizedBox(height: 10),
           _buildDateTimeInfo(displayedActivity),
           const SizedBox(height: 20),
@@ -142,11 +129,6 @@ class DetailsTab extends HookConsumerWidget {
                 ),
                 const SizedBox(height: 12),
                 Text(
-                  'Type: ${ActivityUtils.translateActivityTypeValue(AppLocalizations.of(context)!, displayedActivity.type)}',
-                  style: const TextStyle(fontSize: 16),
-                ),
-                const SizedBox(height: 8),
-                Text(
                   'Distance: ${displayedActivity.distance.toStringAsFixed(2)} km',
                   style: const TextStyle(fontSize: 16),
                 ),
@@ -175,15 +157,9 @@ class DetailsTab extends HookConsumerWidget {
                 color: ColorUtils.white,
               ),
             )
-          : Stack(
+          : const Stack(
               children: [
-                Positioned(
-                  bottom: 16,
-                  right: 80,
-                  child: ShareMapButton(
-                      activity: displayedActivity,
-                      boundaryKey: state.boundaryKey),
-                ),
+                // Share button removed
               ],
             ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,

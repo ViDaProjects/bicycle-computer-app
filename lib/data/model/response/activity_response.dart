@@ -1,21 +1,13 @@
 import 'package:equatable/equatable.dart';
 
 import '../../../domain/entities/activity.dart';
-import '../../../domain/entities/activity_comment.dart';
-import '../../../domain/entities/enum/activity_type.dart';
 import '../../../domain/entities/location.dart';
-import '../../../domain/entities/user.dart';
-import 'activity_comment_response.dart';
 import 'location_response.dart';
-import 'user_response.dart';
 
 /// Represents a response object for an activity.
 class ActivityResponse extends Equatable {
   /// The ID of the activity.
   final String id;
-
-  /// The type of the activity.
-  final ActivityType type;
 
   /// The start datetime of the activity.
   final DateTime startDatetime;
@@ -35,15 +27,6 @@ class ActivityResponse extends Equatable {
   /// The list of locations associated with the activity.
   final Iterable<LocationResponse> locations;
 
-  /// The user concerned by the activity
-  final UserResponse user;
-
-  /// The count of likes on the activity
-  final double likesCount;
-
-  /// has current user liked ?
-  final bool hasCurrentUserLiked;
-
   /// The average cadence of the activity.
   final double cadence;
 
@@ -56,13 +39,9 @@ class ActivityResponse extends Equatable {
   /// The altitude gain during the activity.
   final double altitude;
 
-  /// The list of comments
-  final Iterable<ActivityCommentResponse> comments;
-
   /// Constructs an ActivityResponse object with the given parameters.
   const ActivityResponse(
       {required this.id,
-      required this.type,
       required this.startDatetime,
       required this.endDatetime,
       required this.distance,
@@ -72,16 +51,11 @@ class ActivityResponse extends Equatable {
       required this.calories,
       required this.power,
       required this.altitude,
-      required this.locations,
-      required this.user,
-      required this.likesCount,
-      required this.hasCurrentUserLiked,
-      required this.comments});
+      required this.locations});
 
   @override
   List<Object?> get props => [
         id,
-        type,
         startDatetime,
         endDatetime,
         distance,
@@ -91,24 +65,13 @@ class ActivityResponse extends Equatable {
         calories,
         power,
         altitude,
-        ...locations,
-        user,
-        likesCount,
-        hasCurrentUserLiked,
-        ...comments
+        ...locations
       ];
 
   /// Creates an ActivityResponse object from a JSON map.
   factory ActivityResponse.fromMap(Map<String, dynamic> map) {
-    final activityTypeString = map['type']?.toString().toLowerCase();
-    final activityType = ActivityType.values.firstWhere(
-      (type) => type.name.toLowerCase() == activityTypeString,
-      orElse: () => ActivityType.cycling,
-    );
-
     return ActivityResponse(
       id: map['id'].toString(),
-      type: activityType,
       startDatetime: DateTime.parse(map['startDatetime']),
       endDatetime: DateTime.parse(map['endDatetime']),
       distance: map['distance'].toDouble(),
@@ -128,17 +91,8 @@ class ActivityResponse extends Equatable {
       altitude: map['altitude'] is String
           ? double.parse(map['altitude'])
           : map['altitude'].toDouble(),
-      likesCount: map['likesCount'].toDouble(),
-      hasCurrentUserLiked: map['hasCurrentUserLiked'],
       locations: (map['locations'] as List<dynamic>)
           .map<LocationResponse>((item) => LocationResponse.fromMap(item))
-          .toList(),
-      user: UserResponse.fromMap(
-        map['user'],
-      ),
-      comments: (map['comments'] as List<dynamic>)
-          .map<ActivityCommentResponse>(
-              (item) => ActivityCommentResponse.fromMap(item))
           .toList(),
     );
   }
@@ -155,19 +109,8 @@ class ActivityResponse extends Equatable {
     }).toList()
       ..sort((a, b) => a.datetime.compareTo(b.datetime));
 
-    final activityComments = comments.map<ActivityComment>((comment) {
-      return ActivityComment(
-        id: comment.id,
-        createdAt: comment.createdAt,
-        user: comment.user.toEntity(),
-        content: comment.content,
-      );
-    }).toList()
-      ..sort((a, b) => a.createdAt.compareTo(b.createdAt));
-
     return Activity(
         id: id,
-        type: type,
         startDatetime: startDatetime,
         endDatetime: endDatetime,
         distance: distance,
@@ -177,14 +120,6 @@ class ActivityResponse extends Equatable {
         calories: calories,
         power: power,
         altitude: altitude,
-        locations: activityLocations,
-        likesCount: likesCount,
-        hasCurrentUserLiked: hasCurrentUserLiked,
-        user: User(
-            id: user.id,
-            username: user.username,
-            firstname: user.firstname,
-            lastname: user.lastname),
-        comments: activityComments);
+        locations: activityLocations);
   }
 }

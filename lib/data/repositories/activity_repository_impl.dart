@@ -2,11 +2,8 @@ import 'package:flutter/services.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../domain/entities/activity.dart';
-import '../../domain/entities/activity_comment.dart';
-import '../../domain/entities/enum/activity_type.dart';
 import '../../domain/entities/location.dart';
 import '../../domain/entities/page.dart';
-import '../../domain/entities/user.dart';
 import '../../domain/repositories/activity_repository.dart';
 import '../api/activity_api.dart';
 import '../model/request/activity_request.dart';
@@ -48,16 +45,14 @@ class ActivityRepositoryImpl extends ActivityRepository {
   }
 
   @override
-  Future<EntityPage<Activity>> getMyAndMyFriendsActivities(
-      {int pageNumber = 0}) async {
-    // For now, return the same as getActivities since we don't have user filtering in local DB
+  Future<EntityPage<Activity>> getMyAndMyFriendsActivities({int pageNumber = 0}) async {
+    // For now, just return regular activities
     return getActivities(pageNumber: pageNumber);
   }
 
   @override
-  Future<EntityPage<Activity>> getUserActivities(String userId,
-      {int pageNumber = 0}) async {
-    // For now, return the same as getActivities since we don't have user filtering in local DB
+  Future<EntityPage<Activity>> getUserActivities(String userId, {int pageNumber = 0}) async {
+    // For now, just return regular activities
     return getActivities(pageNumber: pageNumber);
   }
 
@@ -89,10 +84,6 @@ class ActivityRepositoryImpl extends ActivityRepository {
 
     return Activity(
       id: activityMap['id'] as String,
-      type: ActivityType.values.firstWhere(
-        (type) => type.toString().split('.').last == activityMap['type'],
-        orElse: () => ActivityType.cycling,
-      ),
       startDatetime: DateTime.fromMillisecondsSinceEpoch(activityMap['startDatetime'] as int),
       endDatetime: DateTime.fromMillisecondsSinceEpoch(activityMap['endDatetime'] as int),
       distance: (activityMap['distance'] as num).toDouble(),
@@ -103,15 +94,6 @@ class ActivityRepositoryImpl extends ActivityRepository {
       altitude: (activityMap['altitude'] as num).toDouble(),
       time: (activityMap['time'] as num).toDouble(),
       locations: locations,
-      user: User(
-        id: activityMap['userId'] as String,
-        username: activityMap['userName'] as String,
-        firstname: '', // Not stored in our simple DB
-        lastname: '', // Not stored in our simple DB
-      ),
-      likesCount: (activityMap['likesCount'] as num).toDouble(),
-      hasCurrentUserLiked: activityMap['hasCurrentUserLiked'] as bool,
-      comments: const [], // Not implemented in our simple DB
     );
   }
 
@@ -148,35 +130,5 @@ class ActivityRepositoryImpl extends ActivityRepository {
   Future<Activity> editActivity(ActivityRequest request) async {
     // Not implemented for local database
     throw UnimplementedError('Edit activity not implemented for local database');
-  }
-
-  @override
-  Future<void> like(String id) async {
-    // Not implemented for local database
-    throw UnimplementedError('Like activity not implemented for local database');
-  }
-
-  @override
-  Future<void> dislike(String id) async {
-    // Not implemented for local database
-    throw UnimplementedError('Dislike activity not implemented for local database');
-  }
-
-  @override
-  Future<ActivityComment?> createComment(String activityId, String comment) async {
-    // Not implemented for local database
-    throw UnimplementedError('Create comment not implemented for local database');
-  }
-
-  @override
-  Future<ActivityComment> editComment(String id, String comment) async {
-    // Not implemented for local database
-    throw UnimplementedError('Edit comment not implemented for local database');
-  }
-
-  @override
-  Future<String?> removeComment({required String id}) async {
-    // Not implemented for local database
-    throw UnimplementedError('Remove comment not implemented for local database');
   }
 }

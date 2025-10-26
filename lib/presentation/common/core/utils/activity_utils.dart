@@ -1,13 +1,8 @@
-import 'package:flutter/material.dart';
-import 'package:be_for_bike/l10n/app_localizations.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../../core/utils/storage_utils.dart';
 import '../../../../domain/entities/activity.dart';
-import '../../../../domain/entities/enum/activity_type.dart';
 import '../../../../domain/entities/user.dart';
-import '../../../my_activities/view_model/activity_details_view_model.dart';
-import '../../../new_activity/view_model/sum_up_view_model.dart';
 import '../enums/infinite_scroll_list.enum.dart';
 import '../widgets/view_model/infinite_scroll_list_view_model.dart';
 
@@ -15,55 +10,6 @@ enum ActivityUpdateActionEnum { add, edit, remove }
 
 /// Utility class for activity-related operations.
 class ActivityUtils {
-  /// Returns the icon associated with the given activity type.
-  ///
-  /// Returns [Icons.pedal_bike] for [ActivityType.cycling].
-  static IconData getActivityTypeIcon(ActivityType type) {
-    return Icons.directions_bike;
-  }
-
-  /// Translates the name of the activity type using the provided localization.
-  ///
-  /// The [localization] is used to translate the activity type name.
-  static String translateActivityTypeValue(
-      AppLocalizations localization, ActivityType type) {
-    return type.getTranslatedName(localization);
-  }
-
-  /// Builds the dropdown button for selecting the activity type.
-  static Widget buildActivityTypeDropdown<T>(
-    BuildContext context,
-    ActivityType selectedType,
-    T provider,
-  ) {
-    List<DropdownMenuItem<ActivityType>> dropdownItems = ActivityType.values
-        .map((ActivityType value) => DropdownMenuItem<ActivityType>(
-              value: value,
-              child: Row(children: [
-                Icon(ActivityUtils.getActivityTypeIcon(value)),
-                const SizedBox(width: 10),
-                Text(
-                  ActivityUtils.translateActivityTypeValue(
-                    AppLocalizations.of(context)!,
-                    value,
-                  ),
-                )
-              ]),
-            ))
-        .toList();
-
-    return DropdownButton<ActivityType>(
-      value: selectedType,
-      items: dropdownItems,
-      onChanged: (ActivityType? newValue) {
-        if (newValue != null && provider is ActivityDetailsViewModel) {
-          provider.setType(newValue);
-        } else if (newValue != null && provider is SumUpViewModel) {
-          provider.setType(newValue);
-        }
-      },
-    );
-  }
 
   static List<List<Activity>> replaceActivity(
       List<List<Activity>> activities, Activity updatedActivity) {

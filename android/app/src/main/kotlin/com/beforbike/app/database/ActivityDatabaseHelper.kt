@@ -15,12 +15,11 @@ class ActivityDatabaseHelper(context: Context) :
 
     companion object {
         private const val DATABASE_NAME = "activity_database.db"
-        private const val DATABASE_VERSION = 4
+        private const val DATABASE_VERSION = 5
 
         // Activities table
         const val TABLE_ACTIVITIES = "activities"
         const val COLUMN_ACTIVITY_ID = "id"
-        const val COLUMN_ACTIVITY_TYPE = "type"
         const val COLUMN_START_DATETIME = "start_datetime"
         const val COLUMN_END_DATETIME = "end_datetime"
         const val COLUMN_DISTANCE = "distance"
@@ -30,11 +29,6 @@ class ActivityDatabaseHelper(context: Context) :
         const val COLUMN_POWER = "power"
         const val COLUMN_ALTITUDE = "altitude"
         const val COLUMN_TIME = "time"
-        const val COLUMN_USER_ID = "user_id"
-        const val COLUMN_USER_NAME = "user_name"
-        const val COLUMN_USER_AVATAR = "user_avatar"
-        const val COLUMN_LIKES_COUNT = "likes_count"
-        const val COLUMN_HAS_CURRENT_USER_LIKED = "has_current_user_liked"
 
         // Locations table
         const val TABLE_LOCATIONS = "locations"
@@ -54,7 +48,6 @@ class ActivityDatabaseHelper(context: Context) :
         val createActivitiesTable = """
             CREATE TABLE $TABLE_ACTIVITIES (
                 $COLUMN_ACTIVITY_ID TEXT PRIMARY KEY,
-                $COLUMN_ACTIVITY_TYPE TEXT NOT NULL,
                 $COLUMN_START_DATETIME INTEGER NOT NULL,
                 $COLUMN_END_DATETIME INTEGER NOT NULL,
                 $COLUMN_DISTANCE REAL NOT NULL,
@@ -63,12 +56,7 @@ class ActivityDatabaseHelper(context: Context) :
                 $COLUMN_CALORIES REAL NOT NULL,
                 $COLUMN_POWER REAL NOT NULL,
                 $COLUMN_ALTITUDE REAL NOT NULL,
-                $COLUMN_TIME REAL NOT NULL,
-                $COLUMN_USER_ID TEXT NOT NULL,
-                $COLUMN_USER_NAME TEXT NOT NULL,
-                $COLUMN_USER_AVATAR TEXT,
-                $COLUMN_LIKES_COUNT REAL NOT NULL,
-                $COLUMN_HAS_CURRENT_USER_LIKED INTEGER NOT NULL
+                $COLUMN_TIME REAL NOT NULL
             )
         """.trimIndent()
 
@@ -119,7 +107,6 @@ class ActivityDatabaseHelper(context: Context) :
 
         val activity1Values = ContentValues().apply {
             put(COLUMN_ACTIVITY_ID, activity1Id)
-            put(COLUMN_ACTIVITY_TYPE, "cycling")
             put(COLUMN_START_DATETIME, activity1Start)
             put(COLUMN_END_DATETIME, activity1End)
             put(COLUMN_DISTANCE, 25.5)
@@ -129,11 +116,6 @@ class ActivityDatabaseHelper(context: Context) :
             put(COLUMN_POWER, 180.0)
             put(COLUMN_ALTITUDE, 150.0)
             put(COLUMN_TIME, 5400.0) // 90 minutes in seconds
-            put(COLUMN_USER_ID, "user_1")
-            put(COLUMN_USER_NAME, "João Silva")
-            put(COLUMN_USER_AVATAR, "https://example.com/avatar1.jpg")
-            put(COLUMN_LIKES_COUNT, 12.0)
-            put(COLUMN_HAS_CURRENT_USER_LIKED, 0)
         }
         db.insert(TABLE_ACTIVITIES, null, activity1Values)
 
@@ -367,7 +349,6 @@ class ActivityDatabaseHelper(context: Context) :
 
         val activity2Values = ContentValues().apply {
             put(COLUMN_ACTIVITY_ID, activity2Id)
-            put(COLUMN_ACTIVITY_TYPE, "running")
             put(COLUMN_START_DATETIME, activity2Start)
             put(COLUMN_END_DATETIME, activity2End)
             put(COLUMN_DISTANCE, 8.2)
@@ -377,11 +358,6 @@ class ActivityDatabaseHelper(context: Context) :
             put(COLUMN_POWER, 220.0)
             put(COLUMN_ALTITUDE, 85.0)
             put(COLUMN_TIME, 4500.0) // 75 minutes in seconds
-            put(COLUMN_USER_ID, "user_2")
-            put(COLUMN_USER_NAME, "Maria Santos")
-            put(COLUMN_USER_AVATAR, "https://example.com/avatar2.jpg")
-            put(COLUMN_LIKES_COUNT, 8.0)
-            put(COLUMN_HAS_CURRENT_USER_LIKED, 0)
         }
         db.insert(TABLE_ACTIVITIES, null, activity2Values)
 
@@ -442,52 +418,40 @@ class ActivityDatabaseHelper(context: Context) :
 
         val activity3Values = ContentValues().apply {
             put(COLUMN_ACTIVITY_ID, activity3Id)
-            put(COLUMN_ACTIVITY_TYPE, "cycling")
             put(COLUMN_START_DATETIME, activity3Start)
             put(COLUMN_END_DATETIME, activity3End)
-            put(COLUMN_DISTANCE, 25.5)
-            put(COLUMN_SPEED, 18.2)
-            put(COLUMN_CADENCE, 85.0)
-            put(COLUMN_CALORIES, 600.0) // Medium-low calories
-            put(COLUMN_POWER, 220.0)
-            put(COLUMN_ALTITUDE, 150.0)
-            put(COLUMN_TIME, 5400.0) // 90 minutes in seconds
-            put(COLUMN_USER_ID, "user_3")
-            put(COLUMN_USER_NAME, "Carlos Silva")
-            put(COLUMN_USER_AVATAR, "https://example.com/avatar3.jpg")
-            put(COLUMN_LIKES_COUNT, 12.0)
-            put(COLUMN_HAS_CURRENT_USER_LIKED, 0)
+            put(COLUMN_DISTANCE, 12.5)
+            put(COLUMN_SPEED, 12.2)
+            put(COLUMN_CADENCE, 175.0)
+            put(COLUMN_CALORIES, 2200.0) // High calories - long activity
+            put(COLUMN_POWER, 250.0)
+            put(COLUMN_ALTITUDE, 120.0)
+            put(COLUMN_TIME, 6000.0) // 100 minutes in seconds
         }
         db.insert(TABLE_ACTIVITIES, null, activity3Values)
 
-        // Activity 4: Intense walk/run (medium-high calories)
+        // Activity 4: Intense walk/run (medium-high calories) - January
         val activity4Id = "fake_activity_4"
         val activity4Start = Calendar.getInstance().apply {
-            set(2024, Calendar.OCTOBER, 23, 18, 0, 0)
+            set(2025, Calendar.JANUARY, 15, 18, 0, 0)
             set(Calendar.MILLISECOND, 0)
         }.timeInMillis
         val activity4End = Calendar.getInstance().apply {
-            set(2024, Calendar.OCTOBER, 23, 18, 45, 0)
+            set(2025, Calendar.JANUARY, 15, 18, 45, 0)
             set(Calendar.MILLISECOND, 0)
         }.timeInMillis
 
         val activity4Values = ContentValues().apply {
             put(COLUMN_ACTIVITY_ID, activity4Id)
-            put(COLUMN_ACTIVITY_TYPE, "running")
             put(COLUMN_START_DATETIME, activity4Start)
             put(COLUMN_END_DATETIME, activity4End)
-            put(COLUMN_DISTANCE, 5.8)
-            put(COLUMN_SPEED, 7.8)
-            put(COLUMN_CADENCE, 170.0)
-            put(COLUMN_CALORIES, 1000.0) // Medium-high calories
-            put(COLUMN_POWER, 250.0)
-            put(COLUMN_ALTITUDE, 45.0)
-            put(COLUMN_TIME, 2700.0) // 45 minutes in seconds
-            put(COLUMN_USER_ID, "user_4")
-            put(COLUMN_USER_NAME, "Ana Costa")
-            put(COLUMN_USER_AVATAR, "https://example.com/avatar4.jpg")
-            put(COLUMN_LIKES_COUNT, 18.0)
-            put(COLUMN_HAS_CURRENT_USER_LIKED, 1)
+            put(COLUMN_DISTANCE, 6.8)
+            put(COLUMN_SPEED, 8.5)
+            put(COLUMN_CADENCE, 155.0)
+            put(COLUMN_CALORIES, 1400.0) // Moderate calories
+            put(COLUMN_POWER, 200.0)
+            put(COLUMN_ALTITUDE, 65.0)
+            put(COLUMN_TIME, 3600.0) // 60 minutes in seconds
         }
         db.insert(TABLE_ACTIVITIES, null, activity4Values)
 
@@ -594,6 +558,7 @@ class ActivityDatabaseHelper(context: Context) :
 
     // Method to get activity data for statistics
     fun getActivityData(activityId: String): List<Map<String, Any>> {
+        Log.d("ActivityDatabaseHelper", "getActivityData called with activityId: $activityId")
         val data = mutableListOf<Map<String, Any>>()
 
         val db = readableDatabase
@@ -606,9 +571,11 @@ class ActivityDatabaseHelper(context: Context) :
             FROM $TABLE_LOCATIONS l
             WHERE l.$COLUMN_LOCATION_ACTIVITY_ID = ?
             ORDER BY l.$COLUMN_LOCATION_DATETIME ASC
+            LIMIT 100
         """.trimIndent()
 
         val cursor = db.rawQuery(query, arrayOf(activityId))
+        Log.d("ActivityDatabaseHelper", "Query executed, cursor count: ${cursor.count}")
 
         if (cursor.moveToFirst()) {
             do {
@@ -619,7 +586,7 @@ class ActivityDatabaseHelper(context: Context) :
                 val altitude = cursor.getDouble(cursor.getColumnIndexOrThrow(COLUMN_LOCATION_ALTITUDE))
 
                 data.add(mapOf(
-                    "timestamp" to Date(timestamp),
+                    "timestamp" to timestamp,
                     "speed" to speed,
                     "cadence" to cadence,
                     "power" to power,
@@ -629,6 +596,7 @@ class ActivityDatabaseHelper(context: Context) :
         }
 
         cursor.close()
+        Log.d("ActivityDatabaseHelper", "getActivityData returning ${data.size} data points")
         return data
     }
 
@@ -648,7 +616,6 @@ class ActivityDatabaseHelper(context: Context) :
             do {
                 val activity = mapOf(
                     "id" to cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_ACTIVITY_ID)),
-                    "type" to cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_ACTIVITY_TYPE)),
                     "startDatetime" to cursor.getLong(cursor.getColumnIndexOrThrow(COLUMN_START_DATETIME)),
                     "endDatetime" to cursor.getLong(cursor.getColumnIndexOrThrow(COLUMN_END_DATETIME)),
                     "distance" to cursor.getDouble(cursor.getColumnIndexOrThrow(COLUMN_DISTANCE)),
@@ -657,12 +624,7 @@ class ActivityDatabaseHelper(context: Context) :
                     "calories" to cursor.getDouble(cursor.getColumnIndexOrThrow(COLUMN_CALORIES)),
                     "power" to cursor.getDouble(cursor.getColumnIndexOrThrow(COLUMN_POWER)),
                     "altitude" to cursor.getDouble(cursor.getColumnIndexOrThrow(COLUMN_ALTITUDE)),
-                    "time" to cursor.getDouble(cursor.getColumnIndexOrThrow(COLUMN_TIME)),
-                    "userId" to cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_USER_ID)),
-                    "userName" to cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_USER_NAME)),
-                    "userAvatar" to cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_USER_AVATAR)),
-                    "likesCount" to cursor.getDouble(cursor.getColumnIndexOrThrow(COLUMN_LIKES_COUNT)),
-                    "hasCurrentUserLiked" to (cursor.getInt(cursor.getColumnIndexOrThrow(COLUMN_HAS_CURRENT_USER_LIKED)) == 1)
+                    "time" to cursor.getDouble(cursor.getColumnIndexOrThrow(COLUMN_TIME))
                 )
                 activities.add(activity)
             } while (cursor.moveToNext())

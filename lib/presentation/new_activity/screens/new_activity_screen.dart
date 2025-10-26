@@ -26,7 +26,7 @@ class NewActivityScreen extends HookConsumerWidget {
             const TimerTextSized(),
             const Metrics(),
             const SizedBox(height: 10),
-            CurrentLocationMap(),
+            const CurrentLocationMap(),
           ],
         ),
       ),
