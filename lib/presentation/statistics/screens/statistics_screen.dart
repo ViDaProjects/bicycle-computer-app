@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
+import 'dart:math';
 
 import '../../../domain/entities/activity.dart';
 import '../../common/core/utils/color_utils.dart';
@@ -36,22 +37,6 @@ class StatisticsScreen extends HookConsumerWidget {
                   children: [
                     const SizedBox(height: 20),
                     if (selectedActivity != null) ...[
-                      // Speed Chart
-                      _buildChartCard('Speed (km/h)', 'speed', state.activityData),
-                      const SizedBox(height: 20),
-
-                      // Cadence Chart
-                      _buildChartCard('Cadence (rpm)', 'cadence', state.activityData),
-                      const SizedBox(height: 20),
-
-                      // Power Chart
-                      _buildChartCard('Power (watts)', 'power', state.activityData),
-                      const SizedBox(height: 20),
-
-                      // Altitude Chart
-                      _buildChartCard('Altitude (m)', 'altitude', state.activityData),
-                      const SizedBox(height: 20),
-
                       // Statistics Cards
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -76,6 +61,22 @@ class StatisticsScreen extends HookConsumerWidget {
                           _buildStatCard('Calories', '${selectedActivity!.calories.toStringAsFixed(0)} kcal', Icons.local_fire_department),
                         ],
                       ),
+                      const SizedBox(height: 30),
+
+                      // Speed Chart
+                      _buildChartCard('Speed (km/h)', 'speed', state.activityData),
+                      const SizedBox(height: 20),
+
+                      // Cadence Chart
+                      _buildChartCard('Cadence (rpm)', 'cadence', state.activityData),
+                      const SizedBox(height: 20),
+
+                      // Power Chart
+                      _buildChartCard('Power (watts)', 'power', state.activityData),
+                      const SizedBox(height: 20),
+
+                      // Altitude Chart
+                      _buildChartCard('Altitude (m)', 'altitude', state.activityData),
                     ] else ...[
                       // General statistics when no activity is selected
                       Container(
@@ -139,6 +140,12 @@ class StatisticsScreen extends HookConsumerWidget {
     final minX = timestamps.isNotEmpty ? timestamps.reduce((a, b) => a < b ? a : b) : 0.0;
     final maxX = timestamps.isNotEmpty ? timestamps.reduce((a, b) => a > b ? a : b) : 1.0;
 
+    // Calculate Y-axis range: start at 0, end at a nice grid value
+    final values = data.map((entry) => (entry[dataType] as num?)?.toDouble() ?? 0.0).toList();
+    final maxValue = values.isNotEmpty ? values.reduce((a, b) => a > b ? a : b) : 0.0;
+    final minY = 0.0;
+    final maxY = _calculateNiceMax(maxValue);
+
     return Container(
       height: 200,
       padding: const EdgeInsets.all(16),
@@ -163,16 +170,36 @@ class StatisticsScreen extends HookConsumerWidget {
               fontSize: 16,
               fontWeight: FontWeight.bold,
             ),
+            textAlign: TextAlign.center,
           ),
           const SizedBox(height: 16),
           Expanded(
             child: LineChart(
-              LineChartData(
-                gridData: const FlGridData(show: true),
-                titlesData: FlTitlesData(
-                  leftTitles: const AxisTitles(
-                    sideTitles: SideTitles(showTitles: true, reservedSize: 40),
-                  ),
+                LineChartData(
+                  gridData: const FlGridData(show: true),
+                  titlesData: FlTitlesData(
+                    leftTitles: AxisTitles(
+                      sideTitles: SideTitles(
+                        showTitles: true,
+                        reservedSize: 60, // Increased from 50 to 60 for more space
+                        getTitlesWidget: (value, meta) {
+                          return Padding(
+                            padding: const EdgeInsets.only(right: 8), // Add padding between Y-axis labels and chart
+                            child: Text(
+                              value.toStringAsFixed(1), // Format to 1 decimal place
+                              style: const TextStyle(
+                                fontSize: 10,
+                                color: Colors.black87,
+                                fontWeight: FontWeight.w500,
+                              ),
+                              textAlign: TextAlign.right,
+                              overflow: TextOverflow.visible, // Prevent text wrapping
+                              maxLines: 1,
+                            ),
+                          );
+                        },
+                      ),
+                    ),
                   bottomTitles: AxisTitles(
                     sideTitles: SideTitles(
                       showTitles: true,
@@ -200,6 +227,8 @@ class StatisticsScreen extends HookConsumerWidget {
                 borderData: FlBorderData(show: true),
                 minX: minX,
                 maxX: maxX,
+                minY: minY,
+                maxY: maxY,
                 lineBarsData: [
                   LineChartBarData(
                     spots: spots,
@@ -266,5 +295,33 @@ class StatisticsScreen extends HookConsumerWidget {
         ),
       ),
     );
+  }
+
+  /// Calculates a nice maximum value for the Y-axis that creates clean grid lines.
+  /// Returns the next higher "nice" number (like 10, 20, 50, 100, etc.) that encompasses the maxValue.
+  double _calculateNiceMax(double maxValue) {
+    if (maxValue <= 0) return 10.0; // Minimum chart height
+
+    // Find the magnitude (power of 10)
+    final magnitude = (log(maxValue) / ln10).floor(); // log10
+    final power = magnitude.toDouble();
+
+    // Get the first digit
+    final firstDigit = (maxValue / pow(10.0, power)).floor();
+
+    // Calculate nice maximum based on first digit
+    double niceMax;
+    if (firstDigit <= 1) {
+      niceMax = 2.0;
+    } else if (firstDigit <= 2) {
+      niceMax = 5.0;
+    } else if (firstDigit <= 5) {
+      niceMax = 10.0;
+    } else {
+      niceMax = 20.0;
+    }
+
+    // Scale back to original magnitude
+    return niceMax * pow(10.0, power);
   }
 }
