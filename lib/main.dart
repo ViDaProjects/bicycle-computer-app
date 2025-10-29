@@ -10,6 +10,7 @@ import 'package:stack_trace/stack_trace.dart' as stack_trace;
 import 'l10n/support_locale.dart';
 import 'presentation/common/core/services/text_to_speech_service.dart';
 import 'presentation/common/core/utils/color_utils.dart';
+import 'core/utils/audio_service.dart';
 import 'presentation/home/screens/home_screen.dart';
 import 'presentation/my_activities/screens/activity_list_screen.dart';
 import 'presentation/new_activity/screens/sum_up_screen.dart';
@@ -23,6 +24,9 @@ void main() async {
     await SystemChrome.setPreferredOrientations([
       DeviceOrientation.portraitUp,
     ]);
+
+    // Initialize audio service for button sounds
+    await AudioService().initialize();
 
     runApp(
       const ProviderScope(child: MyApp()),

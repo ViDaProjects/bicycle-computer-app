@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:flutter_map/flutter_map.dart';
@@ -6,6 +8,7 @@ import 'package:flutter_hooks/flutter_hooks.dart';
 
 import '../../common/core/utils/color_utils.dart';
 import '../../common/location/view_model/location_view_model.dart';
+import '../../../core/utils/audio_service.dart';
 import '../view_model/home_view_model.dart';
 
 /// The map screen that displays a general map view.
@@ -29,12 +32,20 @@ class MapScreen extends HookConsumerWidget {
     // State to track if map is ready
     final mapReady = useState(false);
 
+    // State to track if map has been moved away from activity path
+    final mapMoved = useState(false);
+
     // Start getting location when no activity is selected
     useEffect(() {
       if (selectedActivity == null) {
         // Force location update when screen is first loaded
         Future.microtask(() async {
-          await locationViewModel.startGettingLocation();
+          try {
+            await locationViewModel.startGettingLocation();
+          } catch (e) {
+            // Handle location service errors gracefully
+            debugPrint('Error starting location service: $e');
+          }
         });
       }
       return null;
@@ -56,28 +67,103 @@ class MapScreen extends HookConsumerWidget {
       return null;
     }, [currentPosition, selectedActivity, mapReady.value]);
 
-    // Calculate activity path points with smoothing
+    // Calculate optimal zoom level to fit the entire path on screen
+    double calculateOptimalZoom(List<LatLng> points, double mapWidth, double mapHeight) {
+      if (points.isEmpty || points.length < 2) return 15.0;
+
+      try {
+        final minLat = points.map((p) => p.latitude).reduce((a, b) => a < b ? a : b);
+        final maxLat = points.map((p) => p.latitude).reduce((a, b) => a > b ? a : b);
+        final minLng = points.map((p) => p.longitude).reduce((a, b) => a < b ? a : b);
+        final maxLng = points.map((p) => p.longitude).reduce((a, b) => a > b ? a : b);
+
+        final latDiff = maxLat - minLat;
+        final lngDiff = maxLng - minLng;
+
+        // If the path is very small (less than 100m), use a high zoom
+        if (latDiff < 0.001 && lngDiff < 0.001) {
+          debugPrint('Path is very small, using zoom 18.0');
+          return 18.0;
+        }
+
+        // Calculate zoom level based on the larger dimension
+        // Using approximate conversion: 1 degree ≈ 111km
+        const double earthCircumference = 40075; // km
+        const double pixelsPerTile = 256;
+
+        // Calculate the zoom that fits the bounds with some padding
+        final latZoom = (earthCircumference * 1000 / (latDiff * 111000)) / (mapHeight / pixelsPerTile);
+        final lngZoom = (earthCircumference * 1000 / (lngDiff * 111000 * math.cos(maxLat * math.pi / 180))) / (mapWidth / pixelsPerTile);
+
+        final optimalZoom = [latZoom, lngZoom].reduce((a, b) => a < b ? a : b);
+
+        // Clamp zoom between reasonable bounds
+        final clampedZoom = optimalZoom.clamp(8.0, 18.0);
+        debugPrint('Zoom calculation: latDiff=$latDiff, lngDiff=$lngDiff, latZoom=$latZoom, lngZoom=$lngZoom, optimal=$optimalZoom, clamped=$clampedZoom');
+        return clampedZoom;
+      } catch (e) {
+        // Fallback zoom if calculation fails
+        debugPrint('Zoom calculation failed: $e, using fallback 14.0');
+        return 14.0;
+      }
+    }
     List<LatLng> smoothActivityPoints(List<LatLng> points) {
-      if (points.length < 3) return points;
+      // Handle edge cases
+      if (points.isEmpty) return points;
+      if (points.length == 1) return points;
+      if (points.length == 2) return points;
 
+      // Limit the number of points to prevent performance issues
+      const int maxPoints = 1000; // Maximum GPS points to process
+      final effectivePoints = points.length > maxPoints
+          ? points.sublist(0, maxPoints)
+          : points;
+
+      // Use Catmull-Rom spline interpolation for smooth curves
       final smoothed = <LatLng>[];
-      const windowSize = 3; // Moving average window
 
-      for (int i = 0; i < points.length; i++) {
-        if (i < windowSize - 1) {
-          smoothed.add(points[i]);
-        } else {
-          double sumLat = 0;
-          double sumLng = 0;
-          int count = 0;
+      // Add first point
+      smoothed.add(effectivePoints[0]);
 
-          for (int j = i - windowSize + 1; j <= i; j++) {
-            sumLat += points[j].latitude;
-            sumLng += points[j].longitude;
-            count++;
-          }
+      // For each segment between points, interpolate
+      for (int i = 0; i < effectivePoints.length - 1; i++) {
+        final p0 = i > 0 ? effectivePoints[i - 1] : effectivePoints[i]; // Previous point or current if first
+        final p1 = effectivePoints[i]; // Current point
+        final p2 = effectivePoints[i + 1]; // Next point
+        final p3 = i < effectivePoints.length - 2 ? effectivePoints[i + 2] : effectivePoints[i + 1]; // Next next point or current if last
 
-          smoothed.add(LatLng(sumLat / count, sumLng / count));
+        // Generate intermediate points using Catmull-Rom spline
+        const int segments = 5; // Reduced from 10 to 5 for better performance
+        for (int t = 1; t <= segments; t++) {
+          final double u = t / segments;
+          final double u2 = u * u;
+          final double u3 = u2 * u;
+
+          // Catmull-Rom spline formula
+          final double lat = 0.5 * (
+            (2 * p1.latitude) +
+            (-p0.latitude + p2.latitude) * u +
+            (2 * p0.latitude - 5 * p1.latitude + 4 * p2.latitude - p3.latitude) * u2 +
+            (-p0.latitude + 3 * p1.latitude - 3 * p2.latitude + p3.latitude) * u3
+          );
+
+          final double lng = 0.5 * (
+            (2 * p1.longitude) +
+            (-p0.longitude + p2.longitude) * u +
+            (2 * p0.longitude - 5 * p1.longitude + 4 * p2.longitude - p3.longitude) * u2 +
+            (-p0.longitude + 3 * p1.longitude - 3 * p2.longitude + p3.longitude) * u3
+          );
+
+          smoothed.add(LatLng(lat, lng));
+        }
+      }
+
+      // Ensure the last point is included
+      if (smoothed.isNotEmpty && effectivePoints.isNotEmpty) {
+        final lastPoint = effectivePoints.last;
+        if (smoothed.last.latitude != lastPoint.latitude ||
+            smoothed.last.longitude != lastPoint.longitude) {
+          smoothed.add(lastPoint);
         }
       }
 
@@ -92,7 +178,8 @@ class MapScreen extends HookConsumerWidget {
 
     // Log activity information when selected
     useEffect(() {
-      // Activity selection effect - no logging needed in production
+      // Activity selection effect - reset map moved state
+      mapMoved.value = false;
       return null;
     }, [selectedActivity]);
 
@@ -108,23 +195,13 @@ class MapScreen extends HookConsumerWidget {
             selectedActivity.locations.first.latitude,
             selectedActivity.locations.first.longitude,
           ),
-          child: Stack(
-            alignment: Alignment.center,
-            children: [
-              Icon(
-                Icons.location_pin,
-                color: ColorUtils.greenDarker,
-                size: 40,
-              ),
-              const Positioned(
-                top: 8,
-                child: Icon(
-                  Icons.star,
-                  color: Colors.white,
-                  size: 16,
-                ),
-              ),
-            ],
+          child: IconButton(
+            icon: const Icon(
+              Icons.play_arrow,
+              color: Colors.green,
+              size: 30,
+            ),
+            onPressed: () {},
           ),
         ),
       );
@@ -139,23 +216,13 @@ class MapScreen extends HookConsumerWidget {
               selectedActivity.locations.last.latitude,
               selectedActivity.locations.last.longitude,
             ),
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                Icon(
-                  Icons.location_pin,
-                  color: ColorUtils.red,
-                  size: 40,
-                ),
-                const Positioned(
-                  top: 8,
-                  child: Icon(
-                    Icons.stop,
-                    color: Colors.white,
-                    size: 16,
-                  ),
-                ),
-              ],
+            child: IconButton(
+              icon: const Icon(
+                Icons.stop,
+                color: Colors.red,
+                size: 30,
+              ),
+              onPressed: () {},
             ),
           ),
         );
@@ -164,18 +231,40 @@ class MapScreen extends HookConsumerWidget {
 
     // Determine map center
     LatLng center;
-    if (activityPoints.isNotEmpty) {
+    if (activityPoints.isNotEmpty && activityPoints.length >= 2) {
       // Center on activity path
-      final minLat = activityPoints.map((p) => p.latitude).reduce((a, b) => a < b ? a : b);
-      final maxLat = activityPoints.map((p) => p.latitude).reduce((a, b) => a > b ? a : b);
-      final minLng = activityPoints.map((p) => p.longitude).reduce((a, b) => a < b ? a : b);
-      final maxLng = activityPoints.map((p) => p.longitude).reduce((a, b) => a > b ? a : b);
-      center = LatLng((minLat + maxLat) / 2, (minLng + maxLng) / 2);
+      try {
+        final minLat = activityPoints.map((p) => p.latitude).reduce((a, b) => a < b ? a : b);
+        final maxLat = activityPoints.map((p) => p.latitude).reduce((a, b) => a > b ? a : b);
+        final minLng = activityPoints.map((p) => p.longitude).reduce((a, b) => a < b ? a : b);
+        final maxLng = activityPoints.map((p) => p.longitude).reduce((a, b) => a > b ? a : b);
+        center = LatLng((minLat + maxLat) / 2, (minLng + maxLng) / 2);
+      } catch (e) {
+        // Fallback if bounds calculation fails
+        center = currentPosition != null
+            ? LatLng(currentPosition.latitude, currentPosition.longitude)
+            : const LatLng(-23.5505, -46.6333);
+      }
     } else {
       // Default to current position or São Paulo
       center = currentPosition != null
           ? LatLng(currentPosition.latitude, currentPosition.longitude)
           : const LatLng(-23.5505, -46.6333);
+    }
+
+    // Get screen dimensions for zoom calculation
+    final screenSize = MediaQuery.of(context).size;
+    final mapWidth = screenSize.width - 24; // Account for margins
+    final mapHeight = screenSize.height * 0.7; // Use 70% of screen height for map
+
+    // Calculate optimal zoom level
+    final optimalZoom = activityPoints.isNotEmpty
+        ? calculateOptimalZoom(activityPoints, mapWidth, mapHeight)
+        : 15.0;
+
+    // Debug logging for zoom calculation
+    if (activityPoints.isNotEmpty) {
+      debugPrint('Map zoom calculation: ${activityPoints.length} points, screen: ${mapWidth}x${mapHeight}, optimal zoom: $optimalZoom');
     }
 
     return Scaffold(
@@ -202,9 +291,15 @@ class MapScreen extends HookConsumerWidget {
                   mapController: mapController,
                   options: MapOptions(
                     initialCenter: center,
-                    initialZoom: activityPoints.isNotEmpty ? 14.0 : 15.0,
+                    initialZoom: optimalZoom,
                     onMapReady: () {
                       mapReady.value = true;
+                    },
+                    onPositionChanged: (position, hasGesture) {
+                      // Mark map as moved when user gestures (pans/zooms)
+                      if (hasGesture && activityPoints.isNotEmpty) {
+                        mapMoved.value = true;
+                      }
                     },
                   ),
                   children: [
@@ -231,10 +326,8 @@ class MapScreen extends HookConsumerWidget {
                         polylines: [
                           Polyline(
                             points: activityPoints,
-                            strokeWidth: 5,
-                            color: ColorUtils.main,
-                            borderColor: Colors.white,
-                            borderStrokeWidth: 2,
+                            strokeWidth: 4,
+                            color: ColorUtils.blueGrey,
                           ),
                         ],
                       ),
@@ -298,10 +391,146 @@ class MapScreen extends HookConsumerWidget {
                       ),
                   ],
                 ),
-                // Satellite/Map toggle button
+                // Map control buttons
                 Positioned(
                   top: 16,
                   right: 16,
+                  child: Column(
+                    children: [
+                      // Satellite/Map toggle button
+                      Container(
+                        margin: const EdgeInsets.only(bottom: 8),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.9),
+                          borderRadius: BorderRadius.circular(8),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.2),
+                              blurRadius: 4,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: IconButton(
+                          icon: Icon(
+                            useSatelliteView.value ? Icons.map : Icons.satellite,
+                            color: ColorUtils.main,
+                          ),
+                          onPressed: () {
+                            AudioService().playButtonClick();
+                            useSatelliteView.value = !useSatelliteView.value;
+                          },
+                          tooltip: useSatelliteView.value ? 'Mostrar mapa' : 'Mostrar satélite',
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                // Zoom buttons at bottom right
+                Positioned(
+                  bottom: 16,
+                  right: 16,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.9),
+                      borderRadius: BorderRadius.circular(8),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.2),
+                          blurRadius: 4,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      children: [
+                        IconButton(
+                          icon: Icon(
+                            Icons.add,
+                            color: ColorUtils.main,
+                          ),
+                          onPressed: () {
+                            AudioService().playButtonClick();
+                            final currentZoom = mapController.camera.zoom;
+                            mapController.move(
+                              mapController.camera.center,
+                              currentZoom + 1,
+                            );
+                          },
+                          tooltip: 'Aumentar zoom',
+                        ),
+                        Container(
+                          height: 1,
+                          color: ColorUtils.main.withValues(alpha: 0.3),
+                          margin: const EdgeInsets.symmetric(horizontal: 8),
+                        ),
+                        IconButton(
+                          icon: Icon(
+                            Icons.remove,
+                            color: ColorUtils.main,
+                          ),
+                          onPressed: () {
+                            AudioService().playButtonClick();
+                            final currentZoom = mapController.camera.zoom;
+                            mapController.move(
+                              mapController.camera.center,
+                              currentZoom - 1,
+                            );
+                          },
+                          tooltip: 'Diminuir zoom',
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                // Recenter button at bottom left (only visible when map is moved)
+                if (mapMoved.value && activityPoints.isNotEmpty)
+                  Positioned(
+                    bottom: 16,
+                    left: 16,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.9),
+                        borderRadius: BorderRadius.circular(8),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.2),
+                            blurRadius: 4,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: IconButton(
+                        icon: const Icon(
+                          Icons.my_location,
+                          color: Colors.blue,
+                        ),
+                        onPressed: () {
+                          AudioService().playButtonClick();
+                          final mapWidth = MediaQuery.of(context).size.width;
+                          final mapHeight = MediaQuery.of(context).size.height;
+
+                          final optimalZoom = calculateOptimalZoom(activityPoints, mapWidth, mapHeight);
+                          
+                          // Calculate bounds of activity path
+                          final minLat = activityPoints.map((p) => p.latitude).reduce((a, b) => a < b ? a : b);
+                          final maxLat = activityPoints.map((p) => p.latitude).reduce((a, b) => a > b ? a : b);
+                          final minLng = activityPoints.map((p) => p.longitude).reduce((a, b) => a < b ? a : b);
+                          final maxLng = activityPoints.map((p) => p.longitude).reduce((a, b) => a > b ? a : b);
+
+                          // Center on activity path with optimal zoom
+                          final center = LatLng((minLat + maxLat) / 2, (minLng + maxLng) / 2);
+                          mapController.moveAndRotate(center, optimalZoom, 0.0);
+                          mapMoved.value = false; // Reset moved state
+                        },
+                        tooltip: 'Recentrar na rota',
+                      ),
+                    ),
+                  ),
+                // Compass button at upper left
+                Positioned(
+                  top: 16,
+                  left: 16,
                   child: Container(
                     decoration: BoxDecoration(
                       color: Colors.white.withValues(alpha: 0.9),
@@ -316,13 +545,14 @@ class MapScreen extends HookConsumerWidget {
                     ),
                     child: IconButton(
                       icon: Icon(
-                        useSatelliteView.value ? Icons.map : Icons.satellite,
+                        Icons.explore,
                         color: ColorUtils.main,
                       ),
                       onPressed: () {
-                        useSatelliteView.value = !useSatelliteView.value;
+                        AudioService().playButtonClick();
+                        mapController.rotate(0.0);
                       },
-                      tooltip: useSatelliteView.value ? 'Mostrar mapa' : 'Mostrar satélite',
+                      tooltip: 'Orientar para o norte',
                     ),
                   ),
                 ),

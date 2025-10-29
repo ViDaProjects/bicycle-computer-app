@@ -3,6 +3,7 @@ import 'package:google_nav_bar/google_nav_bar.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../common/core/utils/color_utils.dart';
+import '../../../core/utils/audio_service.dart';
 import '../../my_activities/screens/activity_list_screen.dart';
 import '../../settings/screens/settings_screen.dart';
 import '../../statistics/screens/statistics_screen.dart';
@@ -78,6 +79,7 @@ class HomeScreen extends HookConsumerWidget {
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
                 selectedIndex: adjustedIndex,
                 onTabChange: (value) {
+                  AudioService().playNavigationClick();
                   // Adjust the index when map is hidden
                   var actualIndex = value;
                   if (!settingsState.showMap && value >= 1) {

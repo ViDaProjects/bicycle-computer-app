@@ -293,10 +293,12 @@ class BleServerService : Service() {
                                 val lon = jsonObj.optDouble("longitude", Double.NaN)
                                 val alt = jsonObj.optDouble("altitude", Double.NaN)
                                 val vel = jsonObj.optDouble("velocity", Double.NaN)
+                                val cad = jsonObj.optDouble("cadence", Double.NaN)
                                 var savedCount = 0
                                 if (power.isFinite()) { if (dbHelper.insertPower(rideIdFromJson, power.toFloat())) savedCount++ }
                                 if (lat.isFinite() && lon.isFinite()) { val altF = if (alt.isFinite()) alt.toFloat() else null; if (dbHelper.insertMapData(rideIdFromJson, lat.toFloat(), lon.toFloat(), altF)) savedCount++ }
                                 if (vel.isFinite()) { if (dbHelper.insertVelocity(rideIdFromJson, vel.toFloat())) savedCount++ }
+                                if (cad.isFinite()) { if (dbHelper.insertCadence(rideIdFromJson, cad.toFloat())) savedCount++ }
                                 log(if (savedCount > 0) "  => $savedCount dado(s) salvo(s)." else "  -> Nenhum dado válido.")
                             }
                         }

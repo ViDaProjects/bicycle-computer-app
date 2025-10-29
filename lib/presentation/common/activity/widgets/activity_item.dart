@@ -4,6 +4,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import '../../../../domain/entities/activity.dart';
 import '../../core/utils/color_utils.dart';
 import '../view_model/activity_item_view_model.dart';
+import '../../../my_activities/view_model/activity_list_view_model.dart';
 import 'activity_item_details.dart';
 
 class ActivityItem extends HookConsumerWidget {
@@ -26,6 +27,10 @@ class ActivityItem extends HookConsumerWidget {
         ref.read(activityItemViewModelProvider(activity.id).notifier);
     final state = ref.watch(activityItemViewModelProvider(activity.id));
 
+    // Get activity list view model for selection functionality
+    final activityListProvider = ref.watch(activityListViewModelProvider.notifier);
+    final activityListState = ref.watch(activityListViewModelProvider);
+
     const double borderRadius = 24;
 
     Activity currentActivity = state.activity ?? activity;
@@ -35,29 +40,44 @@ class ActivityItem extends HookConsumerWidget {
     final gradientColors = ColorUtils.generateGradientFromCalories(currentActivity.calories);
     
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final isSelected = activityListState.selectedActivities.contains(activity.id);
 
     return InkWell(
       onTap: () async {
-        if (canOpenActivity) {
+        if (activityListState.isSelectionMode) {
+          // In selection mode, toggle selection
+          activityListProvider.toggleActivitySelection(activity.id);
+        } else if (canOpenActivity) {
+          // Normal mode, open activity
           final activityDetails =
               await provider.getActivityDetails(activity);
           provider.goToStatistics(activityDetails);
         }
       },
+      onLongPress: () {
+        // Enter selection mode and select this activity
+        if (!activityListState.isSelectionMode) {
+          activityListProvider.toggleSelectionMode();
+        }
+        activityListProvider.toggleActivitySelection(activity.id);
+      },
       child: Card(
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(borderRadius),
         ),
-        elevation: 2,
+        elevation: isSelected ? 8 : 2,
         margin: const EdgeInsets.all(8),
         child: Container(
           decoration: BoxDecoration(
             gradient: LinearGradient(
-              colors: gradientColors,
+              colors: isSelected 
+                ? [Colors.red.shade200, Colors.red.shade400]
+                : gradientColors,
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
             borderRadius: BorderRadius.circular(borderRadius),
+            border: isSelected ? Border.all(color: Colors.red, width: 3) : null,
             boxShadow: [
               BoxShadow(
                 color: Colors.grey.withValues(alpha: 0.2),

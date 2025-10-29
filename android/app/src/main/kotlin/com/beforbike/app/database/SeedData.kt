@@ -19,49 +19,27 @@ object SeedData {
 
         android.util.Log.d("BeForBike", "Proceeding with insertion")
         val baseTime = System.currentTimeMillis()
-        // Insert larger GPS path for visible map display (U shape: east-south-east)
-        val baseLat = -25.4284f
-        val baseLon = -49.2733f
-        val baseAlt = 880f
-        // Create a 10-minute ride (600 seconds) with GPS points every 10 seconds = 60 points
-        val totalPoints = 60
-        val timeIntervalSeconds = 10
-        val path = mutableListOf<Triple<Float, Float, Float>>().apply {
-            // East segment: decrease lon (west) - 20 points
-            for (i in 0..19) {
-                val progress = i.toFloat() / 19f
-                add(Triple(baseLat, baseLon - progress * 0.2f, baseAlt + progress * 50f))
-            }
-            // South segment: increase lat - 20 points
-            val turnPoint = last()
-            for (i in 1..20) {
-                val progress = i.toFloat() / 20f
-                add(Triple(turnPoint.first + progress * 0.2f, turnPoint.second, turnPoint.third + progress * 30f))
-            }
-            // East segment: increase lon (east, back) - 20 points
-            val turn2Point = last()
-            for (i in 1..20) {
-                val progress = i.toFloat() / 20f
-                add(Triple(turn2Point.first, turn2Point.second + progress * 0.2f, turn2Point.third + progress * 20f))
-            }
-        }
+        // Use specific GPS coordinates for the test ride
+        val path = listOf(
+            // Start: -25.4290, -49.2721
+            Triple(-25.4290f, -49.2721f, 880f),
+            // Checkpoint 1: -25.4285, -49.2730
+            Triple(-25.4285f, -49.2730f, 885f),
+            // Checkpoint 2: -25.4292, -49.2738
+            Triple(-25.4292f, -49.2738f, 890f),
+            // Checkpoint 3: -25.4301, -49.2735
+            Triple(-25.4301f, -49.2735f, 895f),
+            // End: -25.4303, -49.2732 (closer to Checkpoint 3 for better visual connection)
+            Triple(-25.4303f, -49.2732f, 900f)
+        )
 
-        // Generate corresponding velocities, powers, and cadences (60 values)
-        val velocities = mutableListOf<Float>()
-        val powers = mutableListOf<Float>()
-        val cadences = mutableListOf<Float>()
+        val totalPoints = path.size
+        val timeIntervalSeconds = 75 // 75 seconds between each checkpoint for a 5-minute ride (4 intervals * 75s = 300s = 5 minutes)
 
-        // Create realistic cycling data with some variation
-        for (i in 0 until totalPoints) {
-            val baseVelocity = 15.0f + (i % 10) * 0.5f // 15-19.5 km/h with pattern
-            velocities.add(baseVelocity + (-1..1).random() * 0.5f) // Add some noise
-
-            val basePower = 150f + (i % 15) * 5f // 150-215 watts with pattern
-            powers.add(basePower + (-5..5).random()) // Add some noise
-
-            val baseCadence = 85f + (i % 10) * 2f // 85-103 rpm with pattern
-            cadences.add(baseCadence + (-3..3).random()) // Add some noise
-        }
+        // Generate corresponding velocities, powers, and cadences (5 values for 5 points)
+        val velocities = listOf(17.5f, 18.2f, 16.8f, 19.1f, 17.9f)
+        val powers = listOf(165f, 172f, 158f, 185f, 175f)
+        val cadences = listOf(88f, 92f, 85f, 95f, 89f)
 
         // Ensure ride exists first
         if (!dbHelper.ensureRideExists(SAMPLE_RIDE_ID, "Sample Ride")) {
@@ -71,7 +49,7 @@ object SeedData {
 
         android.util.Log.d("BeForBike", "Inserting $totalPoints GPS points for sample ride")
         path.forEachIndexed { index, (lat, lon, alt) ->
-            val timestamp = baseTime + index * timeIntervalSeconds * 1000L // 10 seconds apart
+            val timestamp = baseTime + index * timeIntervalSeconds * 1000L // 75 seconds apart
             val success = dbHelper.insertMapData(SAMPLE_RIDE_ID, lat, lon, alt, timestamp = timestamp)
             if (success) {
                 dbHelper.insertVelocity(SAMPLE_RIDE_ID, velocities[index], timestamp = timestamp)

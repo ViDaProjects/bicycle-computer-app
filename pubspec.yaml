@@ -20,8 +20,8 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 version: 1.0.0+1
 
 environment:
-  sdk: '>3.0.0'
-  flutter: '>=3.16.0'
+  sdk: '>=3.9.2'
+  flutter: '>=3.35.7'
 
 # Dependencies specify other packages that your package needs in order to work.
 # To automatically upgrade your package dependencies to the latest versions
@@ -68,6 +68,8 @@ dependencies:
   # flutter_typeahead: ^5.2.0
   image_picker: ^1.0.4
   image_cropper: ^11.0.0
+  audioplayers: ^6.0.0
+  vibration: ^3.1.4
 
   # flutter_keyboard_visibility: ^6.0.0
 dev_dependencies:
@@ -88,9 +90,9 @@ flutter_icons:
   image_path: "assets/images/bike_logo.png"
 
 # Platforms configuration - disable Windows support
-platforms:
-  android:
-  ios:
+# platforms:
+#   android
+#   ios
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec

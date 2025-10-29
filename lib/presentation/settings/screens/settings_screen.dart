@@ -65,7 +65,9 @@ class SettingsScreen extends HookConsumerWidget {
                                         : 'Status: Disconnected',
                                 style: TextStyle(
                                   fontSize: 14,
-                                  color: CupertinoColors.secondaryLabel,
+                                  color: Theme.of(context).brightness == Brightness.dark
+                                      ? Colors.white70
+                                      : CupertinoColors.secondaryLabel,
                                 ),
                               ),
                             ),

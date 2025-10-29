@@ -38,13 +38,125 @@ class StatisticsScreen extends HookConsumerWidget {
                     const SizedBox(height: 20),
                     if (selectedActivity != null) ...[
                       // Time and Duration Cards (Top Priority)
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                        children: [
-                          _buildTimeCard('Start Time', DateFormat('HH:mm:ss\ndd/MM/yyyy').format(selectedActivity!.startDatetime), Icons.access_time),
-                          _buildTimeCard('End Time', DateFormat('HH:mm:ss\ndd/MM/yyyy').format(selectedActivity!.endDatetime), Icons.access_time_filled),
-                          _buildTimeCard('Duration', _formatDuration(selectedActivity!.endDatetime.difference(selectedActivity!.startDatetime)), Icons.timer),
-                        ],
+                      Card(
+                        elevation: 4,
+                        child: Padding(
+                          padding: const EdgeInsets.all(16.0),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                            children: [
+                              // Start Time Column
+                              Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    Icons.access_time,
+                                    size: 24,
+                                    color: ColorUtils.main,
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    'Start Time',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.bold,
+                                      color: Theme.of(context).brightness == Brightness.dark ? Colors.white : Colors.black87,
+                                    ),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    DateFormat('HH:mm:ss\ndd/MM/yyyy').format(selectedActivity!.startDatetime),
+                                    style: const TextStyle(
+                                      fontSize: 10,
+                                      color: Colors.grey,
+                                      height: 1.2,
+                                    ),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                ],
+                              ),
+                              // Vertical separator
+                              Container(
+                                height: 60,
+                                width: 1,
+                                color: Theme.of(context).brightness == Brightness.dark
+                                    ? Colors.white.withValues(alpha: 0.3)
+                                    : Colors.grey.withValues(alpha: 0.3),
+                              ),
+                              // End Time Column
+                              Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    Icons.access_time_filled,
+                                    size: 24,
+                                    color: ColorUtils.main,
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    'End Time',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.bold,
+                                      color: Theme.of(context).brightness == Brightness.dark ? Colors.white : Colors.black87,
+                                    ),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    DateFormat('HH:mm:ss\ndd/MM/yyyy').format(selectedActivity!.endDatetime),
+                                    style: const TextStyle(
+                                      fontSize: 10,
+                                      color: Colors.grey,
+                                      height: 1.2,
+                                    ),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                ],
+                              ),
+                              // Vertical separator
+                              Container(
+                                height: 60,
+                                width: 1,
+                                color: Theme.of(context).brightness == Brightness.dark
+                                    ? Colors.white.withValues(alpha: 0.3)
+                                    : Colors.grey.withValues(alpha: 0.3),
+                              ),
+                              // Duration Column
+                              Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    Icons.timer,
+                                    size: 24,
+                                    color: ColorUtils.main,
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    'Duration',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.bold,
+                                      color: Theme.of(context).brightness == Brightness.dark ? Colors.white : Colors.black87,
+                                    ),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    _formatDuration(selectedActivity!.endDatetime.difference(selectedActivity!.startDatetime)),
+                                    style: const TextStyle(
+                                      fontSize: 10,
+                                      color: Colors.grey,
+                                      height: 1.2,
+                                    ),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
                       ),
                       const SizedBox(height: 16),
 
@@ -52,49 +164,51 @@ class StatisticsScreen extends HookConsumerWidget {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                         children: [
-                          _buildStatCard('Speed', 'Max: ${provider.getMaxValue('speed').toStringAsFixed(1)} km/h\nAvg: ${provider.getAverageValue('speed').toStringAsFixed(1)} km/h', Icons.speed),
-                          _buildStatCard('Cadence', 'Max: ${provider.getMaxValue('cadence').toStringAsFixed(0)} rpm\nAvg: ${provider.getAverageValue('cadence').toStringAsFixed(0)} rpm', Icons.pedal_bike),
+                          _buildStatCard(context, 'Speed', 'Max: ${provider.getMaxValue('speed').toStringAsFixed(1)} km/h\nAvg: ${provider.getAverageValue('speed').toStringAsFixed(1)} km/h', Icons.speed),
+                          _buildStatCard(context, 'Cadence', 'Max: ${provider.getMaxValue('cadence').toStringAsFixed(0)} rpm\nAvg: ${provider.getAverageValue('cadence').toStringAsFixed(0)} rpm', Icons.pedal_bike),
                         ],
                       ),
                       const SizedBox(height: 16),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                         children: [
-                          _buildStatCard('Power', 'Max: ${provider.getMaxValue('power').toStringAsFixed(0)} W\nAvg: ${provider.getAverageValue('power').toStringAsFixed(0)} W', Icons.flash_on),
-                          _buildStatCard('Altitude', 'Max: ${provider.getMaxValue('altitude').toStringAsFixed(0)} m\nAvg: ${provider.getAverageValue('altitude').toStringAsFixed(0)} m', Icons.terrain),
+                          _buildStatCard(context, 'Power', 'Max: ${provider.getMaxValue('power').toStringAsFixed(0)} W\nAvg: ${provider.getAverageValue('power').toStringAsFixed(0)} W', Icons.flash_on),
+                          _buildStatCard(context, 'Altitude', 'Max: ${provider.getMaxValue('altitude').toStringAsFixed(0)} m\nAvg: ${provider.getAverageValue('altitude').toStringAsFixed(0)} m', Icons.terrain),
                         ],
                       ),
                       const SizedBox(height: 16),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                         children: [
-                          _buildStatCard('Distance', '${selectedActivity!.distance.toStringAsFixed(2)} km', Icons.straighten),
-                          _buildStatCard('Calories', '${selectedActivity!.calories.toStringAsFixed(0)} kcal', Icons.local_fire_department),
+                          _buildStatCard(context, 'Distance', '${selectedActivity!.distance.toStringAsFixed(2)} km', Icons.straighten),
+                          _buildStatCard(context, 'Calories', '${selectedActivity!.calories.toStringAsFixed(0)} kcal', Icons.local_fire_department),
                         ],
                       ),
                       const SizedBox(height: 30),
 
                       // Speed Chart
-                      _buildChartCard('Speed (km/h)', 'speed', state.activityData),
+                      _buildChartCard(context, 'Speed (km/h)', 'speed', state.activityData),
                       const SizedBox(height: 20),
 
                       // Cadence Chart
-                      _buildChartCard('Cadence (rpm)', 'cadence', state.activityData),
+                      _buildChartCard(context, 'Cadence (rpm)', 'cadence', state.activityData),
                       const SizedBox(height: 20),
 
                       // Power Chart
-                      _buildChartCard('Power (W)', 'power', state.activityData),
+                      _buildChartCard(context, 'Power (W)', 'power', state.activityData),
                       const SizedBox(height: 20),
 
                       // Altitude Chart
-                      _buildChartCard('Altitude (m)', 'altitude', state.activityData),
+                      _buildChartCard(context, 'Altitude (m)', 'altitude', state.activityData),
                     ] else ...[
                       // General statistics when no activity is selected
                       Container(
                         height: 200,
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
-                          color: ColorUtils.white,
+                          color: Theme.of(context).brightness == Brightness.dark
+                              ? const Color(0xFF2A2A2A)
+                              : ColorUtils.white,
                           borderRadius: BorderRadius.circular(12),
                           boxShadow: [
                             BoxShadow(
@@ -117,13 +231,15 @@ class StatisticsScreen extends HookConsumerWidget {
     );
   }
 
-  Widget _buildChartCard(String title, String dataType, List<Map<String, dynamic>> data) {
+  Widget _buildChartCard(BuildContext context, String title, String dataType, List<Map<String, dynamic>> data) {
     if (data.isEmpty) {
       return Container(
         height: 200,
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: ColorUtils.white,
+          color: Theme.of(context).brightness == Brightness.dark
+              ? const Color(0xFF2A2A2A)
+              : ColorUtils.white,
           borderRadius: BorderRadius.circular(12),
           boxShadow: [
             BoxShadow(
@@ -161,7 +277,9 @@ class StatisticsScreen extends HookConsumerWidget {
       height: 280,
       padding: const EdgeInsets.symmetric(vertical: 16),
       decoration: BoxDecoration(
-        color: ColorUtils.white,
+        color: Theme.of(context).brightness == Brightness.dark
+            ? const Color(0xFF2A2A2A)
+            : ColorUtils.white,
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
@@ -177,16 +295,39 @@ class StatisticsScreen extends HookConsumerWidget {
         children: [
           Text(
             title,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.bold,
+              color: Theme.of(context).brightness == Brightness.dark ? Colors.white : Colors.black87,
             ),
           ),
           const SizedBox(height: 16),
           Expanded(
             child: LineChart(
                 LineChartData(
-                  gridData: const FlGridData(show: true),
+                  gridData: FlGridData(
+                    show: true,
+                    drawVerticalLine: true,
+                    drawHorizontalLine: true,
+                    horizontalInterval: null, // Use default intervals
+                    verticalInterval: null, // Use default intervals
+                    getDrawingHorizontalLine: (value) {
+                      return FlLine(
+                        color: Theme.of(context).brightness == Brightness.dark
+                            ? Colors.white.withValues(alpha: 0.1)
+                            : Colors.grey.withValues(alpha: 0.2),
+                        strokeWidth: 1,
+                      );
+                    },
+                    getDrawingVerticalLine: (value) {
+                      return FlLine(
+                        color: Theme.of(context).brightness == Brightness.dark
+                            ? Colors.white.withValues(alpha: 0.1)
+                            : Colors.grey.withValues(alpha: 0.2),
+                        strokeWidth: 1,
+                      );
+                    },
+                  ),
                   titlesData: FlTitlesData(
                     leftTitles: AxisTitles(
                       sideTitles: SideTitles(
@@ -197,9 +338,11 @@ class StatisticsScreen extends HookConsumerWidget {
                             padding: const EdgeInsets.only(right: 8), // Add padding between Y-axis labels and chart
                             child: Text(
                               value.toStringAsFixed(1), // Format to 1 decimal place
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 10,
-                                color: Colors.black87,
+                                color: Theme.of(context).brightness == Brightness.dark
+                                    ? Colors.white70
+                                    : Colors.black87,
                                 fontWeight: FontWeight.w500,
                               ),
                               textAlign: TextAlign.right,
@@ -211,18 +354,20 @@ class StatisticsScreen extends HookConsumerWidget {
                       ),
                     ),
                   bottomTitles: AxisTitles(
-                    axisNameWidget: const Text(
+                    axisNameWidget: Text(
                       'hour',
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.bold,
-                        color: Colors.black87,
+                        color: Theme.of(context).brightness == Brightness.dark
+                            ? Colors.white70
+                            : Colors.black87,
                       ),
                     ),
                     axisNameSize: 20,
                     sideTitles: SideTitles(
                       showTitles: true,
-                      reservedSize: 40, // Reduced from 60 to 40 for less empty space
+                      reservedSize: 60, // Increased from 40 to 60 to prevent label overlap
                       getTitlesWidget: (value, meta) {
                         final dateTime = DateTime.fromMillisecondsSinceEpoch(value.toInt());
                         final format = DateFormat('HH:mm');
@@ -243,20 +388,44 @@ class StatisticsScreen extends HookConsumerWidget {
                     sideTitles: SideTitles(showTitles: false),
                   ),
                 ),
+                backgroundColor: Theme.of(context).brightness == Brightness.dark
+                    ? const Color(0xFF2A2A2A)
+                    : Colors.white,
                 borderData: FlBorderData(show: true),
                 minX: minX,
                 maxX: maxX,
                 minY: minY,
                 maxY: maxY,
+                lineTouchData: LineTouchData(
+                  enabled: true,
+                  touchTooltipData: LineTouchTooltipData(
+                    getTooltipItems: (touchedSpots) {
+                      return touchedSpots.map((spot) {
+                        return LineTooltipItem(
+                          spot.y.toStringAsFixed(1),
+                          const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12,
+                          ),
+                        );
+                      }).toList();
+                    },
+                  ),
+                ),
                 lineBarsData: [
                   LineChartBarData(
                     spots: spots,
                     isCurved: true,
-                    color: ColorUtils.main,
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? Colors.grey.shade400
+                        : ColorUtils.main,
                     barWidth: 3,
                     belowBarData: BarAreaData(
                       show: true,
-                      color: ColorUtils.main.withValues(alpha: 0.1),
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? Colors.grey.shade400.withValues(alpha: 0.1)
+                          : ColorUtils.main.withValues(alpha: 0.1),
                     ),
                     dotData: FlDotData(show: false),
                   ),
@@ -269,7 +438,7 @@ class StatisticsScreen extends HookConsumerWidget {
     );
   }
 
-  Widget _buildStatCard(String title, String value, [IconData? icon]) {
+  Widget _buildStatCard(BuildContext context, String title, String value, [IconData? icon]) {
     return SizedBox(
       width: 140, // Increased width further
       height: 140, // Increased height to prevent overflow
@@ -290,10 +459,10 @@ class StatisticsScreen extends HookConsumerWidget {
               ],
               Text(
                 title,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 14, // Slightly smaller font for title
                   fontWeight: FontWeight.bold,
-                  color: Colors.black87,
+                  color: Theme.of(context).brightness == Brightness.dark ? Colors.white : Colors.black87,
                 ),
                 textAlign: TextAlign.center,
               ),
@@ -304,53 +473,6 @@ class StatisticsScreen extends HookConsumerWidget {
                   fontSize: 12, // Slightly smaller font for value
                   color: Colors.grey,
                   height: 1.3, // Better line height for readability
-                ),
-                textAlign: TextAlign.center,
-                maxLines: 4, // Allow more lines for the value text
-                overflow: TextOverflow.ellipsis,
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildTimeCard(String title, String value, [IconData? icon]) {
-    return SizedBox(
-      width: 105, // Smaller width for time cards to fit 3 in a row
-      height: 140,
-      child: Card(
-        elevation: 4,
-        child: Padding(
-          padding: const EdgeInsets.all(8.0), // Reduced padding for smaller cards
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              if (icon != null) ...[
-                Icon(
-                  icon,
-                  size: 24, // Smaller icon for time cards
-                  color: ColorUtils.main,
-                ),
-                const SizedBox(height: 2), // Reduced spacing
-              ],
-              Text(
-                title,
-                style: const TextStyle(
-                  fontSize: 12, // Smaller font for title
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black87,
-                ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 2), // Reduced spacing
-              Text(
-                value,
-                style: const TextStyle(
-                  fontSize: 10, // Smaller font for value
-                  color: Colors.grey,
-                  height: 1.2, // Better line height for readability
                 ),
                 textAlign: TextAlign.center,
                 maxLines: 4, // Allow more lines for the value text
