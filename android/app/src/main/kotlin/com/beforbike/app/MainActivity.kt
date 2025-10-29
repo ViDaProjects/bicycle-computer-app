@@ -113,6 +113,14 @@ class MainActivity: FlutterActivity() {
                     val mac = connectedDevice?.address ?: ""
                     result.success(mac)
                 }
+                "getLocalBluetoothName" -> {
+                    val name = bluetoothAdapter.name ?: "Unknown"
+                    result.success(name)
+                }
+                "getLocalBluetoothMac" -> {
+                    val mac = bluetoothAdapter.address ?: ""
+                    result.success(mac)
+                }
                 "setBleEnabled" -> {
                     val enabled = call.argument<Boolean>("enabled") ?: false
                     if (enabled) {

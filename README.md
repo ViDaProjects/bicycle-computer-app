@@ -101,7 +101,38 @@ flutter test --coverage
 flutter analyze
 ```
 
-### 📱 Production Build
+### � BLE Testing
+
+The project includes comprehensive BLE testing tools for validating data transmission between Windows and Android:
+
+#### Prerequisites
+- Python 3.7 or higher
+- bleak library (`pip install bleak`)
+
+#### Running BLE Tests
+
+```bash
+# Simple test with 10 fixed data points
+python ble_test.py --simple
+
+# Advanced test with realistic cycling data
+python ble_test.py --duration 300 --interval 1
+
+# Test with compression
+python ble_test.py --simple --compressed
+
+# Specify device MAC address
+python ble_test.py --simple --device AA:BB:CC:DD:EE:FF
+```
+
+#### Test Modes
+- **Simple Mode**: 10 fixed data points for quick validation
+- **Advanced Mode**: Realistic cycling simulation with GPS, speed, cadence, and power
+- **Compression**: Optional GZIP compression for bandwidth testing
+
+For detailed documentation, see [BLE_TEST_README.md](BLE_TEST_README.md).
+
+### �📱 Production Build
 
 ```bash
 # Build for Android APK

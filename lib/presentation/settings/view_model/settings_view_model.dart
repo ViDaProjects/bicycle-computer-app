@@ -39,7 +39,20 @@ class SettingsViewModel extends StateNotifier<SettingsState> {
       state = state.copyWith(isBluetoothEnabled: isEnabled);
       if (isEnabled) {
         _updateConnectedStatus();
+        _updateLocalDeviceInfo();
       }
+    } catch (e) {
+      // Handle errors
+    }
+  }
+
+  Future<void> _updateLocalDeviceInfo() async {
+    try {
+      final name = await _channel.invokeMethod('getLocalBluetoothName') as String?;
+      final mac = await _channel.invokeMethod('getLocalBluetoothMac') as String?;
+      // Filter out fake MAC address (02:00:00:00:00:00) which is returned when MAC is not accessible
+      final filteredMac = (mac != null && mac != "02:00:00:00:00:00") ? mac : null;
+      state = state.copyWith(localDeviceName: name, localDeviceMac: filteredMac);
     } catch (e) {
       // Handle errors
     }

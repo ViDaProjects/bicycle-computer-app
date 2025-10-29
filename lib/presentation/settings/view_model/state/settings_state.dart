@@ -12,6 +12,8 @@ class SettingsState {
   final String? connectedDeviceName;
   final String? connectedDeviceMac;
   final bool isBleConnected;
+  final String? localDeviceName;
+  final String? localDeviceMac;
 
   /// Represents the state of the settings screen.
   ///
@@ -28,6 +30,8 @@ class SettingsState {
   /// [connectedDeviceName] indicates the name of the connected BLE device.
   /// [connectedDeviceMac] indicates the MAC address of the connected BLE device.
   /// [isBleConnected] indicates whether BLE is connected to a device.
+  /// [localDeviceName] indicates the local device BLE name.
+  /// [localDeviceMac] indicates the local device BLE MAC address.
   const SettingsState({
     required this.isLoading,
     required this.isBluetoothEnabled,
@@ -42,6 +46,8 @@ class SettingsState {
     this.connectedDeviceName,
     this.connectedDeviceMac,
     this.isBleConnected = false,
+    this.localDeviceName,
+    this.localDeviceMac,
   });
 
   /// Creates an initial state for the settings screen.
@@ -60,6 +66,8 @@ class SettingsState {
       connectedDeviceName: null,
       connectedDeviceMac: null,
       isBleConnected: false,
+      localDeviceName: null,
+      localDeviceMac: null,
     );
   }
 
@@ -78,6 +86,8 @@ class SettingsState {
     String? connectedDeviceName,
     String? connectedDeviceMac,
     bool? isBleConnected,
+    String? localDeviceName,
+    String? localDeviceMac,
   }) {
     return SettingsState(
       isLoading: isLoading ?? this.isLoading,
@@ -93,6 +103,8 @@ class SettingsState {
       connectedDeviceName: connectedDeviceName ?? this.connectedDeviceName,
       connectedDeviceMac: connectedDeviceMac ?? this.connectedDeviceMac,
       isBleConnected: isBleConnected ?? this.isBleConnected,
+      localDeviceName: localDeviceName ?? this.localDeviceName,
+      localDeviceMac: localDeviceMac ?? this.localDeviceMac,
     );
   }
 }

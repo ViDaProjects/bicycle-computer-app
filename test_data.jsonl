@@ -1,0 +1,5 @@
+{"ride_id": "99", "timestamp": "2024-01-01T12:00:00.000000", "latitude": -23.550520, "longitude": -46.633308, "altitude": 760.0, "velocity": 0.0, "cadence": 0.0, "power": 0.0}
+{"ride_id": "99", "timestamp": "2024-01-01T12:00:01.000000", "latitude": -23.550529, "longitude": -46.633317, "altitude": 760.5, "velocity": 25.3, "cadence": 92.1, "power": 185.7}
+{"ride_id": "99", "timestamp": "2024-01-01T12:00:02.000000", "latitude": -23.550538, "longitude": -46.633326, "altitude": 761.0, "velocity": 26.1, "cadence": 94.8, "power": 192.3}
+{"ride_id": "99", "timestamp": "2024-01-01T12:00:03.000000", "latitude": -23.550547, "longitude": -46.633335, "altitude": 761.5, "velocity": 24.9, "cadence": 91.5, "power": 178.9}
+{"ride_id": "99", "timestamp": "2024-01-01T12:00:04.000000", "latitude": -23.550556, "longitude": -46.633344, "altitude": 762.0, "velocity": 27.2, "cadence": 96.3, "power": 198.4}

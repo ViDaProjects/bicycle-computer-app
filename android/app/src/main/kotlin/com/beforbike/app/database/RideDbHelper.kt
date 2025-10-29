@@ -12,33 +12,22 @@ import java.util.*
 class RideDbHelper(context: Context) :
     SQLiteOpenHelper(context, DATABASE_NAME, null, DATABASE_VERSION) {
 
-    // --- Definição do Schema (baseado em cria_banco.sql) ---
+    // --- Schema Definition (based on cria_banco.sql) ---
     companion object {
-        const val DATABASE_VERSION = 2 // Incremente se mudar o schema
-        const val DATABASE_NAME = "Rides.db"
+        const val DATABASE_VERSION = 7 // Increment if schema changes
+        const val DATABASE_NAME = "BikeRides.db"
         private const val TAG = "RideDbHelper"
 
         // Constants for easy access from other files
-        const val TABLE_RIDES = "rides"
+        const val TABLE_RIDES = "Rides"
         const val TABLE_POWER = "Power"
-        const val TABLE_MAPDATA = "MapDATA"
+        const val TABLE_MAPDATA = "Localization"
         const val TABLE_VELOCITY = "Velocity"
         const val TABLE_CADENCE = "Cadence"
 
-        const val COLUMN_RIDES_RIDE_NAME = "Ride_name"
-        const val COLUMN_START_TIME = "StartTime"
-        const val COLUMN_END_TIME = "EndTime"
-        const val COLUMN_DURATION = "Duration"
-        const val COLUMN_MAX_VELOCITY = "MaxVelocity"
-        const val COLUMN_MEAN_VELOCITY = "MeanVelocity"
-        const val COLUMN_CALORIES = "Calories"
-        const val COLUMN_DISTANCE = "Distance"
-        const val COLUMN_MAPDATA_ID = "MapDataID"
-        const val COLUMN_VELOCITY_ID = "VelocityID"
-
         const val COLUMN_RIDE_ID = "ride_id"
         const val COLUMN_POWER = "power"
-        const val COLUMN_TIMESTAMP = "timestamp_ocorrencia"
+        const val COLUMN_TIMESTAMP = "timestamp"
         const val COLUMN_LATITUDE = "latitude"
         const val COLUMN_LONGITUDE = "longitude"
         const val COLUMN_ALTITUDE = "altitude"
@@ -46,72 +35,53 @@ class RideDbHelper(context: Context) :
         const val COLUMN_CADENCE = "cadence"
 
         object RidesEntry : BaseColumns {
-            const val TABLE_NAME = "rides"
-            const val COLUMN_NAME_RIDE_NAME = "Ride_name" // DEVE SER ÚNICO
-            const val COLUMN_NAME_START_TIME = "StartTime"
-            const val COLUMN_NAME_END_TIME = "EndTime"
-            // Outras colunas de resumo
-            const val COLUMN_NAME_DURATION = "Duration"
-            const val COLUMN_NAME_MAX_VELOCITY = "MaxVelocity"
-            const val COLUMN_NAME_MEAN_VELOCITY = "MeanVelocity"
-            const val COLUMN_NAME_CALORIES = "Calories"
-            const val COLUMN_NAME_DISTANCE = "Distance"
-            const val COLUMN_NAME_MAPDATA_ID = "MapDataID" // Provavelmente não usado
-            const val COLUMN_NAME_VELOCITY_ID = "VelocityID" // Provavelmente não usado
+            const val TABLE_NAME = "Rides"
+            const val COLUMN_NAME_RIDE_ID = "ride_id" // Unique ride ID
         }
 
         object PowerEntry : BaseColumns {
             const val TABLE_NAME = "Power"
-            const val COLUMN_NAME_RIDE_ID = "ride_id" // Chave estrangeira para rides._ID
+            const val COLUMN_NAME_RIDE_ID = "ride_id" // Foreign key to rides._ID
             const val COLUMN_NAME_POWER = "power"
-            const val COLUMN_NAME_TIMESTAMP = "timestamp_ocorrencia"
+            const val COLUMN_NAME_TIMESTAMP = "timestamp"
         }
 
         object MapDataEntry : BaseColumns {
-            const val TABLE_NAME = "MapDATA"
-            const val COLUMN_NAME_RIDE_ID = "ride_id" // Chave estrangeira para rides._ID
+            const val TABLE_NAME = "Localization"
+            const val COLUMN_NAME_RIDE_ID = "ride_id" // Foreign key to rides._ID
             const val COLUMN_NAME_LATITUDE = "latitude"
             const val COLUMN_NAME_LONGITUDE = "longitude"
             const val COLUMN_NAME_ALTITUDE = "altitude"
-            const val COLUMN_NAME_TIMESTAMP = "timestamp_ocorrencia"
+            const val COLUMN_NAME_TIMESTAMP = "timestamp"
         }
 
         object VelocityEntry : BaseColumns {
             const val TABLE_NAME = "Velocity"
-            const val COLUMN_NAME_RIDE_ID = "ride_id" // Chave estrangeira para rides._ID
+            const val COLUMN_NAME_RIDE_ID = "ride_id" // Foreign key to rides._ID
             const val COLUMN_NAME_VELOCITY = "velocity"
-            const val COLUMN_NAME_TIMESTAMP = "timestamp_ocorrencia"
+            const val COLUMN_NAME_TIMESTAMP = "timestamp"
         }
 
         object CadenceEntry : BaseColumns {
             const val TABLE_NAME = "Cadence"
-            const val COLUMN_NAME_RIDE_ID = "ride_id" // Chave estrangeira para rides._ID
+            const val COLUMN_NAME_RIDE_ID = "ride_id" // Foreign key to rides._ID
             const val COLUMN_NAME_CADENCE = "cadence"
-            const val COLUMN_NAME_TIMESTAMP = "timestamp_ocorrencia"
+            const val COLUMN_NAME_TIMESTAMP = "timestamp"
         }
 
-        // --- Comandos SQL de Criação ---
+        // --- SQL Creation Commands ---
         private const val SQL_CREATE_RIDES =
             "CREATE TABLE ${RidesEntry.TABLE_NAME} (" +
-                    "${BaseColumns._ID} INTEGER PRIMARY KEY," + // Usa o ID vindo do JSON
-                    "${RidesEntry.COLUMN_NAME_RIDE_NAME} TEXT UNIQUE NOT NULL," +
-                    "${RidesEntry.COLUMN_NAME_START_TIME} TEXT," +
-                    "${RidesEntry.COLUMN_NAME_END_TIME} TEXT," +
-                    "${RidesEntry.COLUMN_NAME_DURATION} REAL, " + // Use REAL para floats
-                    "${RidesEntry.COLUMN_NAME_MAX_VELOCITY} REAL, " +
-                    "${RidesEntry.COLUMN_NAME_MEAN_VELOCITY} REAL, " +
-                    "${RidesEntry.COLUMN_NAME_CALORIES} REAL, " +
-                    "${RidesEntry.COLUMN_NAME_DISTANCE} REAL, " +
-                    "${RidesEntry.COLUMN_NAME_MAPDATA_ID} INTEGER, " +
-                    "${RidesEntry.COLUMN_NAME_VELOCITY_ID} INTEGER)"
+                    "${BaseColumns._ID} INTEGER PRIMARY KEY," + // Android internal ID
+                    "${RidesEntry.COLUMN_NAME_RIDE_ID} INTEGER UNIQUE NOT NULL)" // Unique ride ID
 
         private const val SQL_CREATE_POWER =
             "CREATE TABLE ${PowerEntry.TABLE_NAME} (" +
-                    "${BaseColumns._ID} INTEGER PRIMARY KEY AUTOINCREMENT," + // ID interno da tabela Power
+                    "${BaseColumns._ID} INTEGER PRIMARY KEY AUTOINCREMENT," +
                     "${PowerEntry.COLUMN_NAME_RIDE_ID} INTEGER NOT NULL," +
                     "${PowerEntry.COLUMN_NAME_POWER} REAL," + // Use REAL
                     "${PowerEntry.COLUMN_NAME_TIMESTAMP} TEXT NOT NULL," +
-                    "FOREIGN KEY (${PowerEntry.COLUMN_NAME_RIDE_ID}) REFERENCES ${RidesEntry.TABLE_NAME}(${BaseColumns._ID}) ON DELETE CASCADE)" // ON DELETE CASCADE apaga dados relacionados se a ride for deletada
+                    "FOREIGN KEY (${PowerEntry.COLUMN_NAME_RIDE_ID}) REFERENCES ${RidesEntry.TABLE_NAME}(${BaseColumns._ID}) ON DELETE CASCADE)"
 
         private const val SQL_CREATE_MAPDATA =
             "CREATE TABLE ${MapDataEntry.TABLE_NAME} (" +
@@ -139,7 +109,7 @@ class RideDbHelper(context: Context) :
                     "${CadenceEntry.COLUMN_NAME_TIMESTAMP} TEXT NOT NULL," +
                     "FOREIGN KEY (${CadenceEntry.COLUMN_NAME_RIDE_ID}) REFERENCES ${RidesEntry.TABLE_NAME}(${BaseColumns._ID}) ON DELETE CASCADE)"
 
-        // --- Comandos SQL de Exclusão ---
+        // --- SQL Deletion Commands ---
         private const val SQL_DELETE_RIDES = "DROP TABLE IF EXISTS ${RidesEntry.TABLE_NAME}"
         private const val SQL_DELETE_POWER = "DROP TABLE IF EXISTS ${PowerEntry.TABLE_NAME}"
         private const val SQL_DELETE_MAPDATA = "DROP TABLE IF EXISTS ${MapDataEntry.TABLE_NAME}"
@@ -149,11 +119,11 @@ class RideDbHelper(context: Context) :
 
     override fun onConfigure(db: SQLiteDatabase) {
         super.onConfigure(db)
-        db.setForeignKeyConstraintsEnabled(true) // Ativa chaves estrangeiras
+        db.setForeignKeyConstraintsEnabled(true) // Enable foreign keys
     }
 
     override fun onCreate(db: SQLiteDatabase) {
-        // Cria as tabelas APENAS na primeira vez que o DB é acessado
+        // Create tables ONLY on first DB access
         Log.i(TAG, "Criando tabelas do banco de dados (onCreate)...")
         db.execSQL(SQL_CREATE_RIDES)
         db.execSQL(SQL_CREATE_POWER)
@@ -165,28 +135,28 @@ class RideDbHelper(context: Context) :
 
     override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
         Log.w(TAG, "Atualizando banco de dados da v$oldVersion para v$newVersion. Dados antigos serão perdidos.")
-        // Política simples: apaga tudo e recria. Para produção, use ALTER TABLE.
+        // Simple policy: drop everything and recreate. For production, use ALTER TABLE.
         db.execSQL(SQL_DELETE_CADENCE)
         db.execSQL(SQL_DELETE_POWER)
         db.execSQL(SQL_DELETE_MAPDATA)
         db.execSQL(SQL_DELETE_VELOCITY)
-        db.execSQL(SQL_DELETE_RIDES) // Apaga rides por último por causa das FKs
+        db.execSQL(SQL_DELETE_RIDES) // Drop rides last due to FKs
         onCreate(db)
     }
 
     override fun onDowngrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
         Log.w(TAG, "Fazendo downgrade do banco de dados da v$oldVersion para v$newVersion. Dados antigos serão perdidos.")
-        onUpgrade(db, oldVersion, newVersion) // Usa a mesma lógica destrutiva
+        onUpgrade(db, oldVersion, newVersion) // Use same destructive logic
     }
 
-    // --- Funções de Ajuda (Helpers) ---
+    // --- Helper Functions ---
 
     private fun getCurrentTimestamp(): String {
-        // Formato consistente com o SQL original
+        // Format consistent with original SQL
         return SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS", Locale.getDefault()).format(Date())
     }
 
-    // --- Funções de INSERÇÃO ---
+    // --- INSERT Functions ---
 
     /**
      * Verifica se uma corrida com o ID fornecido existe. Se não, cria uma nova.
@@ -204,8 +174,8 @@ class RideDbHelper(context: Context) :
         // Verifica se o ID já existe
         val cursor = db.query(
             RidesEntry.TABLE_NAME,
-            arrayOf(BaseColumns._ID), // Coluna que queremos verificar
-            "${BaseColumns._ID} = ?", // Clausula WHERE
+            arrayOf(RidesEntry.COLUMN_NAME_RIDE_ID), // Coluna que queremos verificar
+            "${RidesEntry.COLUMN_NAME_RIDE_ID} = ?", // Clausula WHERE
             arrayOf(rideIdFromDevice.toString()), // Argumento
             null, null, null, "1" // Limit 1
         )
@@ -222,23 +192,12 @@ class RideDbHelper(context: Context) :
             // Corrida não existe, TENTA criar
             Log.i(TAG, "ensureRideExists: Ride ID $rideIdFromDevice não encontrado. Tentando criar...")
             val writableDb = this.writableDatabase
-            val startTime = getCurrentTimestamp() // Usa o momento atual como start time
-            val rideName = "$defaultNameBase $rideIdFromDevice @ $startTime" // Nome único
+            // Nome não é mais necessário - apenas o ID identifica a corrida
 
             val values = ContentValues().apply {
-                put(BaseColumns._ID, rideIdFromDevice) // USA O ID VINDO DO JSON
-                put(RidesEntry.COLUMN_NAME_RIDE_NAME, rideName)
-                put(RidesEntry.COLUMN_NAME_START_TIME, startTime)
-                putNull(RidesEntry.COLUMN_NAME_END_TIME)
-                // Inicializa outros campos
-                put(RidesEntry.COLUMN_NAME_DURATION, 0.0)
-                put(RidesEntry.COLUMN_NAME_DISTANCE, 0.0)
-                // Inicializa outros resumos como nulos ou 0
-                putNull(RidesEntry.COLUMN_NAME_MAX_VELOCITY)
-                putNull(RidesEntry.COLUMN_NAME_MEAN_VELOCITY)
-                putNull(RidesEntry.COLUMN_NAME_CALORIES)
-                putNull(RidesEntry.COLUMN_NAME_MAPDATA_ID)
-                putNull(RidesEntry.COLUMN_NAME_VELOCITY_ID)
+                put(BaseColumns._ID, rideIdFromDevice) // ID interno do Android
+                put(RidesEntry.COLUMN_NAME_RIDE_ID, rideIdFromDevice) // ID único da corrida
+                        // Summary constants removed - values calculated dynamically
             }
             try {
                 // Usa insert com CONFLICT_IGNORE. Se já existir (criado por outra thread), não faz nada.
@@ -348,7 +307,7 @@ class RideDbHelper(context: Context) :
         val db = this.readableDatabase
         val cursor = db.query(
             RidesEntry.TABLE_NAME,
-            arrayOf(BaseColumns._ID),
+            arrayOf(RidesEntry.COLUMN_NAME_RIDE_ID),
             null, null, null, null, null
         )
         val rideIds = mutableListOf<Long>()
@@ -361,18 +320,14 @@ class RideDbHelper(context: Context) :
     }
 
     /**
-     * Retorna os dados de uma corrida específica.
+     * Retorna os dados básicos de uma corrida específica.
      */
     fun getRideData(rideId: Long): Map<String, Any?>? {
         val db = this.readableDatabase
         val cursor = db.query(
             RidesEntry.TABLE_NAME,
-            arrayOf(BaseColumns._ID, RidesEntry.COLUMN_NAME_RIDE_NAME,
-                    RidesEntry.COLUMN_NAME_START_TIME, RidesEntry.COLUMN_NAME_END_TIME,
-                    RidesEntry.COLUMN_NAME_DURATION, RidesEntry.COLUMN_NAME_MAX_VELOCITY,
-                    RidesEntry.COLUMN_NAME_MEAN_VELOCITY, RidesEntry.COLUMN_NAME_CALORIES,
-                    RidesEntry.COLUMN_NAME_DISTANCE),
-            "${BaseColumns._ID} = ?",
+            arrayOf(BaseColumns._ID, RidesEntry.COLUMN_NAME_RIDE_ID),
+            "${RidesEntry.COLUMN_NAME_RIDE_ID} = ?",
             arrayOf(rideId.toString()),
             null, null, null
         )
@@ -380,14 +335,7 @@ class RideDbHelper(context: Context) :
             if (it.moveToFirst()) {
                 return mapOf(
                     "id" to it.getLong(0),
-                    "name" to it.getString(1),
-                    "startTime" to it.getString(2),
-                    "endTime" to it.getString(3),
-                    "duration" to it.getDouble(4),
-                    "maxVelocity" to it.getDouble(5),
-                    "meanVelocity" to it.getDouble(6),
-                    "calories" to it.getDouble(7),
-                    "distance" to it.getDouble(8)
+                    "ride_id" to it.getLong(1)
                 )
             }
         }
@@ -535,9 +483,6 @@ class RideDbHelper(context: Context) :
             Log.d(TAG, "Final stats for ride $rideId: duration=$duration, distance=$distance, calories=$calories")
         }
 
-        // Atualizar o banco de dados com os valores calculados
-        updateRideSummary(rideId, distance, duration, calories, maxVelocity, meanVelocity)
-
         return result
     }
 
@@ -560,32 +505,6 @@ class RideDbHelper(context: Context) :
             }
         }
         return velocities
-    }
-
-    /**
-     * Atualiza o resumo de uma corrida com dados calculados
-     */
-    fun updateRideSummary(rideId: Long, distance: Double, duration: Double, calories: Double, maxVelocity: Double? = null, meanVelocity: Double? = null) {
-        val db = this.writableDatabase
-        val values = ContentValues().apply {
-            put(RidesEntry.COLUMN_NAME_DISTANCE, distance)
-            put(RidesEntry.COLUMN_NAME_DURATION, duration)
-            put(RidesEntry.COLUMN_NAME_CALORIES, calories)
-            put(RidesEntry.COLUMN_NAME_END_TIME, getCurrentTimestamp())
-            if (maxVelocity != null) {
-                put(RidesEntry.COLUMN_NAME_MAX_VELOCITY, maxVelocity)
-            }
-            if (meanVelocity != null) {
-                put(RidesEntry.COLUMN_NAME_MEAN_VELOCITY, meanVelocity)
-            }
-        }
-        val rowsAffected = db.update(
-            RidesEntry.TABLE_NAME,
-            values,
-            "${BaseColumns._ID} = ?",
-            arrayOf(rideId.toString())
-        )
-        Log.d(TAG, "Updated ride summary for ride $rideId: $rowsAffected rows affected")
     }
 
     /**
