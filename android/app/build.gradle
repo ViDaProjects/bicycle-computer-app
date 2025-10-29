@@ -24,16 +24,16 @@ if (flutterVersionName == null) {
 
 android {
     namespace 'com.beforbike.app'
-    compileSdk flutter.compileSdkVersion
+    compileSdk 36
     ndkVersion flutter.ndkVersion
 
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_24
-        targetCompatibility JavaVersion.VERSION_24
+        sourceCompatibility JavaVersion.VERSION_21
+        targetCompatibility JavaVersion.VERSION_21
     }
 
     kotlinOptions {
-        jvmTarget = '24'
+        jvmTarget = '21'
     }
 
     sourceSets {
@@ -41,72 +41,41 @@ android {
     }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
         applicationId "com.beforbike.app"
-        // You can update the following values to match your application needs.
-        // For more information, see: https://docs.flutter.dev/deployment/android#reviewing-the-gradle-build-configuration.
         minSdkVersion flutter.minSdkVersion
-        targetSdkVersion 29
+        targetSdkVersion 36
         versionCode flutterVersionCode.toInteger()
         versionName flutterVersionName
     }
 
-    // Disable AAR metadata validation to resolve flutter_keyboard_visibility issues
-    configurations.all {
-        resolutionStrategy {
-            eachDependency { details ->
-                if (details.requested.group == 'io.flutter.plugins' && details.requested.name == 'flutter_keyboard_visibility') {
-                    details.useVersion '6.0.0'
-                }
-            }
-        }
-    }
-
-    // Disable AAR metadata validation
-    packagingOptions {
-        resources {
-            excludes += ['META-INF/DEPENDENCIES']
-        }
-    }
-
-    // Disable AAR metadata validation globally
-    tasks.whenTaskAdded { task ->
-        if (task.name.startsWith('transformAarMetaData')) {
-            task.enabled = false
-        }
-        // Disable all AAR metadata check tasks
-        if (task.name.contains('checkAarMetadata')) {
-            task.enabled = false
-        }
-    }
-
-    // Disable AAR metadata validation for flutter_keyboard_visibility specifically
-    afterEvaluate {
-        tasks.findAll { it.name.contains('checkDebugAarMetadata') && it.name.contains('flutter_keyboard_visibility') }.each { task ->
-            task.enabled = false
-        }
-        tasks.findAll { it.name.contains('checkReleaseAarMetadata') && it.name.contains('flutter_keyboard_visibility') }.each { task ->
-            task.enabled = false
-        }
-        // Disable AAR metadata validation for flutter_secure_storage
-        tasks.findAll { it.name.contains('checkDebugAarMetadata') && it.name.contains('flutter_secure_storage') }.each { task ->
-            task.enabled = false
-        }
-        tasks.findAll { it.name.contains('checkReleaseAarMetadata') && it.name.contains('flutter_secure_storage') }.each { task ->
-            task.enabled = false
-        }
-    }
-
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
             signingConfig signingConfigs.debug
+            shrinkResources false
+            minifyEnabled false
         }
     }
+
+    buildFeatures {
+        viewBinding true
+        dataBinding true
+        buildConfig true
+    }
+
+    dependenciesInfo {
+        includeInApk true
+        includeInBundle true
+    }
+}
+
+dependencies {
+    // Core AndroidX libraries
+    implementation 'androidx.core:core-ktx:1.17.0'
+
+    // Timber for logging
+    implementation 'com.jakewharton.timber:timber:5.0.1'
 }
 
 flutter {
     source '../..'
 }
-

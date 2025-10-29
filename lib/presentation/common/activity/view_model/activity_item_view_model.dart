@@ -76,7 +76,7 @@ class ActivityItemViewModel extends StateNotifier<ActivityItemState> {
   void goToStatistics(Activity activityDetails) {
     // Set the selected activity in the home view model
     ref.read(homeViewModelProvider.notifier).setSelectedActivity(activityDetails);
-    // Navigate to the statistics tab (index 2)
-    ref.read(homeViewModelProvider.notifier).setCurrentIndex(2);
+    // Navigate to the map tab (index 1) instead of statistics (index 2)
+    ref.read(homeViewModelProvider.notifier).setCurrentIndex(1);
   }
 }

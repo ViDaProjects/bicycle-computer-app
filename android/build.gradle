@@ -1,3 +1,15 @@
+buildscript {
+    repositories {
+        google()
+        mavenCentral()
+    }
+
+    dependencies {
+        classpath 'com.android.tools.build:gradle:8.13.0'
+        classpath 'org.jetbrains.kotlin:kotlin-gradle-plugin:2.2.21'
+    }
+}
+
 allprojects {
     repositories {
         google()
@@ -7,28 +19,11 @@ allprojects {
 
 rootProject.buildDir = '../build'
 subprojects {
-    project.buildDir = "${rootProject.buildDir}/${project.name}"
-}
+    project.buildDir = "${rootProject.buildDir}/${project.name}"}
 subprojects {
     project.evaluationDependsOn(':app')
 }
 
 tasks.register("clean", Delete) {
     delete rootProject.buildDir
-}
-
-configurations.all {
-   resolutionStrategy {
-     force 'androidx.core:core:2.0.10'
-     force 'androidx.core:core-ktx:2.0.10'
-   }
- }
-
-// Disable AAR metadata validation globally for all projects
-subprojects {
-    tasks.whenTaskAdded { task ->
-        if (task.name.contains('checkAarMetadata')) {
-            task.enabled = false
-        }
-    }
 }

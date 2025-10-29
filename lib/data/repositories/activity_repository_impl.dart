@@ -122,8 +122,9 @@ class ActivityRepositoryImpl extends ActivityRepository {
 
   @override
   Future<Activity?> addActivity(ActivityRequest request) async {
-    // Not implemented for local database
-    throw UnimplementedError('Add activity not implemented for local database');
+    // Flutter não salva dados - apenas lê do Android
+    // Dados são salvos pelo Android via BLE
+    throw UnimplementedError('Flutter não salva atividades - dados vêm do Android via BLE');
   }
 
   @override

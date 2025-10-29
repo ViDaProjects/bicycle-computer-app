@@ -32,7 +32,7 @@ class PendingRequestsViewModel extends StateNotifier<PendingRequestsState> {
     state = state.copyWith(pendingRequests: users);
   }
 
-  acceptRequest(String userId) {
+  Future<Null> acceptRequest(String userId) {
     state = state.copyWith(isLoading: true);
     return ref
         .read(friendRequestRepositoryProvider)
@@ -44,7 +44,7 @@ class PendingRequestsViewModel extends StateNotifier<PendingRequestsState> {
     });
   }
 
-  rejectRequest(String userId) {
+  Future<Null> rejectRequest(String userId) {
     state = state.copyWith(isLoading: true);
     return ref
         .read(friendRequestRepositoryProvider)

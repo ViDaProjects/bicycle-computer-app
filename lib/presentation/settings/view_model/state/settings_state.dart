@@ -9,6 +9,9 @@ class SettingsState {
   final bool showDistanceTraveled;
   final bool showCalories;
   final bool showMap;
+  final String? connectedDeviceName;
+  final String? connectedDeviceMac;
+  final bool isBleConnected;
 
   /// Represents the state of the settings screen.
   ///
@@ -22,6 +25,9 @@ class SettingsState {
   /// [showDistanceTraveled] indicates whether to show distance traveled.
   /// [showCalories] indicates whether to show calories.
   /// [showMap] indicates whether to show map.
+  /// [connectedDeviceName] indicates the name of the connected BLE device.
+  /// [connectedDeviceMac] indicates the MAC address of the connected BLE device.
+  /// [isBleConnected] indicates whether BLE is connected to a device.
   const SettingsState({
     required this.isLoading,
     required this.isBluetoothEnabled,
@@ -33,6 +39,9 @@ class SettingsState {
     required this.showDistanceTraveled,
     required this.showCalories,
     required this.showMap,
+    this.connectedDeviceName,
+    this.connectedDeviceMac,
+    this.isBleConnected = false,
   });
 
   /// Creates an initial state for the settings screen.
@@ -48,6 +57,9 @@ class SettingsState {
       showDistanceTraveled: true,
       showCalories: true,
       showMap: true,
+      connectedDeviceName: null,
+      connectedDeviceMac: null,
+      isBleConnected: false,
     );
   }
 
@@ -63,6 +75,9 @@ class SettingsState {
     bool? showDistanceTraveled,
     bool? showCalories,
     bool? showMap,
+    String? connectedDeviceName,
+    String? connectedDeviceMac,
+    bool? isBleConnected,
   }) {
     return SettingsState(
       isLoading: isLoading ?? this.isLoading,
@@ -75,6 +90,9 @@ class SettingsState {
       showDistanceTraveled: showDistanceTraveled ?? this.showDistanceTraveled,
       showCalories: showCalories ?? this.showCalories,
       showMap: showMap ?? this.showMap,
+      connectedDeviceName: connectedDeviceName ?? this.connectedDeviceName,
+      connectedDeviceMac: connectedDeviceMac ?? this.connectedDeviceMac,
+      isBleConnected: isBleConnected ?? this.isBleConnected,
     );
   }
 }

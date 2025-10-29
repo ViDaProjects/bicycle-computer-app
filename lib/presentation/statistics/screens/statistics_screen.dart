@@ -37,6 +37,17 @@ class StatisticsScreen extends HookConsumerWidget {
                   children: [
                     const SizedBox(height: 20),
                     if (selectedActivity != null) ...[
+                      // Time and Duration Cards (Top Priority)
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                        children: [
+                          _buildTimeCard('Start Time', DateFormat('HH:mm:ss\ndd/MM/yyyy').format(selectedActivity!.startDatetime), Icons.access_time),
+                          _buildTimeCard('End Time', DateFormat('HH:mm:ss\ndd/MM/yyyy').format(selectedActivity!.endDatetime), Icons.access_time_filled),
+                          _buildTimeCard('Duration', _formatDuration(selectedActivity!.endDatetime.difference(selectedActivity!.startDatetime)), Icons.timer),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+
                       // Statistics Cards
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -57,7 +68,7 @@ class StatisticsScreen extends HookConsumerWidget {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                         children: [
-                          _buildStatCard('Distance', '${(selectedActivity!.distance / 1000).toStringAsFixed(2)} km', Icons.straighten),
+                          _buildStatCard('Distance', '${selectedActivity!.distance.toStringAsFixed(2)} km', Icons.straighten),
                           _buildStatCard('Calories', '${selectedActivity!.calories.toStringAsFixed(0)} kcal', Icons.local_fire_department),
                         ],
                       ),
@@ -72,7 +83,7 @@ class StatisticsScreen extends HookConsumerWidget {
                       const SizedBox(height: 20),
 
                       // Power Chart
-                      _buildChartCard('Power (watts)', 'power', state.activityData),
+                      _buildChartCard('Power (W)', 'power', state.activityData),
                       const SizedBox(height: 20),
 
                       // Altitude Chart
@@ -200,6 +211,15 @@ class StatisticsScreen extends HookConsumerWidget {
                       ),
                     ),
                   bottomTitles: AxisTitles(
+                    axisNameWidget: const Text(
+                      'hour',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black87,
+                      ),
+                    ),
+                    axisNameSize: 20,
                     sideTitles: SideTitles(
                       showTitles: true,
                       reservedSize: 40, // Reduced from 60 to 40 for less empty space
@@ -296,6 +316,53 @@ class StatisticsScreen extends HookConsumerWidget {
     );
   }
 
+  Widget _buildTimeCard(String title, String value, [IconData? icon]) {
+    return SizedBox(
+      width: 105, // Smaller width for time cards to fit 3 in a row
+      height: 140,
+      child: Card(
+        elevation: 4,
+        child: Padding(
+          padding: const EdgeInsets.all(8.0), // Reduced padding for smaller cards
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              if (icon != null) ...[
+                Icon(
+                  icon,
+                  size: 24, // Smaller icon for time cards
+                  color: ColorUtils.main,
+                ),
+                const SizedBox(height: 2), // Reduced spacing
+              ],
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 12, // Smaller font for title
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black87,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 2), // Reduced spacing
+              Text(
+                value,
+                style: const TextStyle(
+                  fontSize: 10, // Smaller font for value
+                  color: Colors.grey,
+                  height: 1.2, // Better line height for readability
+                ),
+                textAlign: TextAlign.center,
+                maxLines: 4, // Allow more lines for the value text
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   /// Calculates a nice maximum value for the Y-axis that creates clean grid lines.
   /// Returns the next higher "nice" number (like 10, 20, 50, 100, etc.) that encompasses the maxValue.
   double _calculateNiceMax(double maxValue) {
@@ -322,5 +389,14 @@ class StatisticsScreen extends HookConsumerWidget {
 
     // Scale back to original magnitude
     return niceMax * pow(10.0, power);
+  }
+
+  /// Formats a Duration into a readable string (HH:MM:SS).
+  String _formatDuration(Duration duration) {
+    String twoDigits(int n) => n.toString().padLeft(2, '0');
+    final hours = twoDigits(duration.inHours);
+    final minutes = twoDigits(duration.inMinutes.remainder(60));
+    final seconds = twoDigits(duration.inSeconds.remainder(60));
+    return '$hours:$minutes:$seconds';
   }
 }

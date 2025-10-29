@@ -1,63 +1,150 @@
 package com.beforbike.app
 
-import android.os.Bundle
-import android.util.Log
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.plugin.common.MethodChannel
-import com.beforbike.app.database.ActivityDatabaseHelper
+import android.content.Context
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.os.Bundle
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
+import android.Manifest
+import android.bluetooth.*
+import android.bluetooth.le.*
+import android.os.ParcelUuid
+import android.util.Log
+import com.beforbike.app.BleServerService
+import com.beforbike.app.database.RideDbHelper
+import com.beforbike.app.database.SeedData
+import java.text.SimpleDateFormat
+import java.util.Locale
 
 class MainActivity: FlutterActivity() {
-    private val CHANNEL = "com.beforbike.app/database"
-    private lateinit var databaseHelper: ActivityDatabaseHelper
+    private val CHANNEL = "com.beforbike.ble"
+    private lateinit var bluetoothAdapter: BluetoothAdapter
+    private var bluetoothLeAdvertiser: BluetoothLeAdvertiser? = null
+    private var bluetoothGatt: BluetoothGatt? = null
+    private var connectedDevice: BluetoothDevice? = null
+    private lateinit var dbHelper: RideDbHelper
+    private val SCAN_PERIOD: Long = 10000
+    private var scanning = false
+    private val handler = android.os.Handler()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        dbHelper = RideDbHelper(this)
 
-        databaseHelper = ActivityDatabaseHelper(this)
+        // Enable seed data: uncomment next line to insert sample ride for testing
+        SeedData.insertSampleRide(applicationContext)
+
+        val bluetoothManager = getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
+        bluetoothAdapter = bluetoothManager.adapter
+        bluetoothLeAdvertiser = bluetoothAdapter.bluetoothLeAdvertiser
+
+        MethodChannel(flutterEngine?.dartExecutor?.binaryMessenger!!, "com.beforbike.app/database").setMethodCallHandler { call, result ->
+            when (call.method) {
+                "getAllActivities" -> {
+                    val rideIds = dbHelper.getAllRideIds()
+                    val activities = mutableListOf<Map<String, Any>>()
+                    for (id in rideIds) {
+                        val data = dbHelper.getRideData(id)
+                        if (data != null) {
+                            val activity = mapRideToActivity(id, data)
+                            activities.add(activity)
+                        }
+                    }
+                    result.success(activities)
+                }
+                "getActivityLocations" -> {
+                    val activityId = call.argument<String>("activityId") ?: ""
+                    val rideId = activityId.toLongOrNull() ?: 0L
+                    val mapData = dbHelper.getRideMapData(rideId)
+                    val locations = mapData.map { data ->
+                        val timestampStr = data.first
+                        val lat = data.second
+                        val lon = data.third
+                        val timestamp = try {
+                            val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS", Locale.getDefault())
+                            dateFormat.parse(timestampStr)?.time ?: System.currentTimeMillis()
+                        } catch (e: Exception) {
+                            System.currentTimeMillis()
+                        }
+                        mapOf(
+                            "id" to "loc_${timestampStr}_${System.currentTimeMillis()}",
+                            "datetime" to timestamp,
+                            "latitude" to lat,
+                            "longitude" to lon
+                        )
+                    }
+                    result.success(locations)
+                }
+                else -> {
+                    result.notImplemented()
+                }
+            }
+        }
 
         MethodChannel(flutterEngine?.dartExecutor?.binaryMessenger!!, CHANNEL).setMethodCallHandler { call, result ->
             when (call.method) {
-                "getActivityData" -> {
-                    val activityId = call.argument<String>("activityId")
-                    if (activityId != null) {
-                        try {
-                            Log.d("MainActivity", "getActivityData called with activityId: $activityId")
-                            val data = databaseHelper.getActivityData(activityId)
-                            Log.d("MainActivity", "getActivityData returned ${data.size} data points")
-                            result.success(data)
-                        } catch (e: Exception) {
-                            Log.e("MainActivity", "Error getting activity data", e)
-                            result.error("DATABASE_ERROR", "Failed to get activity data", e.message)
-                        }
-                    } else {
-                        result.error("INVALID_ARGUMENT", "Activity ID is required", null)
-                    }
+                "requestPermissions" -> {
+                    requestBlePermissions()
+                    result.success(true)
                 }
-                "getAllActivities" -> {
-                    try {
-                        val activities = databaseHelper.getAllActivities()
-                        Log.d("MainActivity", "getAllActivities returned ${activities.size} activities")
-                        if (activities.isNotEmpty()) {
-                            Log.d("MainActivity", "First activity: ${activities.first()}")
-                        }
-                        result.success(activities)
-                    } catch (e: Exception) {
-                        Log.e("MainActivity", "Error getting activities", e)
-                        result.error("DATABASE_ERROR", "Failed to get activities", e.message)
-                    }
+                "isBleEnabled" -> {
+                    result.success(bluetoothAdapter.isEnabled)
                 }
-                "getActivityLocations" -> {
-                    val activityId = call.argument<String>("activityId")
-                    if (activityId != null) {
-                        try {
-                            val locations = databaseHelper.getActivityLocations(activityId)
-                            result.success(locations)
-                        } catch (e: Exception) {
-                            result.error("DATABASE_ERROR", "Failed to get activity locations", e.message)
-                        }
+                "scanAndConnectToDevice" -> {
+                    scanAndConnectDevice()
+                    result.success(true)
+                }
+                "disconnectDevice" -> {
+                    disconnectDevice()
+                    result.success(true)
+                }
+                "getConnectedStatus" -> {
+                    val status = connectedDevice != null && bluetoothGatt != null
+                    result.success(status)
+                }
+                "getConnectedDeviceName" -> {
+                    val name = connectedDevice?.name ?: "Unknown Device"
+                    result.success(name)
+                }
+                "getConnectedDeviceMac" -> {
+                    val mac = connectedDevice?.address ?: ""
+                    result.success(mac)
+                }
+                "setBleEnabled" -> {
+                    val enabled = call.argument<Boolean>("enabled") ?: false
+                    if (enabled) {
+                        startBleServerService()
                     } else {
-                        result.error("INVALID_ARGUMENT", "Activity ID is required", null)
+                        stopBleServerService()
                     }
+                    result.success(true)
+                }
+                "getAllRideIds" -> {
+                    val ids = dbHelper.getAllRideIds()
+                    result.success(ids)
+                }
+                "getRideData" -> {
+                    val rideId = call.argument<Long>("rideId") ?: 0L
+                    val data = dbHelper.getRideData(rideId)
+                    result.success(data)
+                }
+                "calculateRideStatistics" -> {
+                    val rideId = call.argument<Long>("rideId") ?: 0L
+                    val stats = dbHelper.calculateRideStatistics(rideId)
+                    result.success(stats)
+                }
+                "getRideVelocities" -> {
+                    val rideId = call.argument<Long>("rideId") ?: 0L
+                    val velocities = dbHelper.getRideVelocities(rideId)
+                    result.success(velocities.map { it.second.toString() }) // Simplified
+                }
+                "getRideMapData" -> {
+                    val rideId = call.argument<Long>("rideId") ?: 0L
+                    val mapData = dbHelper.getRideMapData(rideId)
+                    result.success(mapData.map { "${it.first}:${it.second}:${it.third}" }) // Simplified
                 }
                 else -> {
                     result.notImplemented()
@@ -66,8 +153,132 @@ class MainActivity: FlutterActivity() {
         }
     }
 
+    private fun requestBlePermissions() {
+        val permissions = listOf(
+            Manifest.permission.ACCESS_FINE_LOCATION,
+            Manifest.permission.ACCESS_BACKGROUND_LOCATION,
+            Manifest.permission.BLUETOOTH,
+            Manifest.permission.BLUETOOTH_ADMIN,
+            Manifest.permission.BLUETOOTH_SCAN,
+            Manifest.permission.BLUETOOTH_CONNECT,
+            Manifest.permission.BLUETOOTH_ADVERTISE,
+        )
+        val missingPermissions = permissions.filter {
+            ContextCompat.checkSelfPermission(this, it) != PackageManager.PERMISSION_GRANTED
+        }.toTypedArray()
+        if (missingPermissions.isNotEmpty()) {
+            ActivityCompat.requestPermissions(this, missingPermissions, 1)
+        }
+    }
+
+    private fun scanAndConnectDevice() {
+        if (!bluetoothAdapter.isEnabled) {
+            Log.e("BLE", "Bluetooth not enabled")
+            return
+        }
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_SCAN) != PackageManager.PERMISSION_GRANTED) {
+            Log.e("BLE", "No scan permission")
+            return
+        }
+
+        val scanner = bluetoothAdapter.bluetoothLeScanner
+        val scanCallback: ScanCallback = object : ScanCallback() {
+            override fun onScanResult(callbackType: Int, result: ScanResult) {
+                super.onScanResult(callbackType, result)
+                val device = result.device
+                val data = result.scanRecord
+                if (data?.serviceUuids?.contains(ParcelUuid.fromString("12345678-1234-5678-1234-56789abcdef0")) == true) {
+                    // Found bike computer
+                    connectToDevice(device)
+                    scanner.stopScan(this)
+                }
+            }
+
+            override fun onBatchScanResults(results: MutableList<ScanResult>) {
+                super.onBatchScanResults(results)
+            }
+
+            override fun onScanFailed(errorCode: Int) {
+                super.onScanFailed(errorCode)
+                Log.e("BLE", "Scan failed: $errorCode")
+            }
+        }
+
+        scanning = true
+        scanner.startScan(null, ScanSettings.Builder().build(), scanCallback)
+
+        handler.postDelayed({
+            if (scanning) {
+                scanning = false
+                scanner.stopScan(scanCallback)
+            }
+        }, SCAN_PERIOD)
+    }
+
+    private fun connectToDevice(device: BluetoothDevice) {
+        connectedDevice = device
+        bluetoothGatt = device.connectGatt(this, false, object : BluetoothGattCallback() {
+            override fun onConnectionStateChange(gatt: BluetoothGatt, status: Int, newState: Int) {
+                if (newState == BluetoothProfile.STATE_CONNECTED) {
+                    Log.i("BLE", "Connected to ${device.address}")
+                    gatt.discoverServices()
+                } else if (newState == BluetoothProfile.STATE_DISCONNECTED) {
+                    Log.i("BLE", "Disconnected from ${device.address}")
+                    connectedDevice = null
+                }
+            }
+
+            override fun onServicesDiscovered(gatt: BluetoothGatt, status: Int) {
+                if (status == BluetoothGatt.GATT_SUCCESS) {
+                    Log.i("BLE", "Services discovered")
+                    // Could read/write characteristics here if needed
+                }
+            }
+        })
+    }
+
+    private fun disconnectDevice() {
+        bluetoothGatt?.disconnect()
+        bluetoothGatt?.close()
+        bluetoothGatt = null
+        connectedDevice = null
+    }
+
+    private fun startBleServerService() {
+        val intent = Intent(this, BleServerService::class.java)
+        startService(intent)
+    }
+
+    private fun stopBleServerService() {
+        val intent = Intent(this, BleServerService::class.java)
+        stopService(intent)
+    }
+
+    private fun mapRideToActivity(rideId: Long, data: Map<String, Any?>?): Map<String, Any> {
+        val stats = dbHelper.calculateRideStatistics(rideId) ?: emptyMap()
+        val currentTime = System.currentTimeMillis()
+
+        // Debug logging
+        Log.d("BeForBike", "Stats for ride $rideId: $stats")
+        Log.d("BeForBike", "Distance: ${stats["distance"]}, Calories: ${stats["calories"]}, Duration: ${stats["duration"]}")
+
+        return mapOf(
+            "id" to rideId.toString(),
+            "startDatetime" to (stats["startTime"] as? Long ?: currentTime),
+            "endDatetime" to (stats["endTime"] as? Long ?: currentTime + 1000),
+            "distance" to (stats["distance"] ?: 0.0),
+            "speed" to (stats["meanVelocity"] ?: 0.0),
+            "cadence" to 90.0,
+            "calories" to (stats["calories"] ?: 0.0),
+            "power" to 160.0,
+            "altitude" to 900.0,
+            "time" to (stats["duration"] ?: 0.0),
+        )
+    }
+
     override fun onDestroy() {
-        databaseHelper.close()
         super.onDestroy()
+        disconnectDevice()
+        dbHelper.close()
     }
 }

@@ -23,31 +23,73 @@ class SettingsScreen extends HookConsumerWidget {
                   const SizedBox(height: 20),
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    child: Column(
                       children: [
                         Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Icon(
-                              Icons.bluetooth,
-                              color: ColorUtils.main,
-                              size: 24,
+                            Row(
+                              children: [
+                                Icon(
+                                  Icons.bluetooth,
+                                  color: ColorUtils.main,
+                                  size: 24,
+                                ),
+                                const SizedBox(width: 12),
+                                const Text(
+                                  'Bicycle Computer BLE Service',
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ],
                             ),
-                            const SizedBox(width: 12),
-                            const Text(
-                              'Bicycle BLE connection',
-                              style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.w500,
+                            CupertinoSwitch(
+                              value: state.isBluetoothEnabled,
+                              onChanged: (value) => provider.toggleBluetooth(value),
+                              activeTrackColor: ColorUtils.main,
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            const SizedBox(width: 36), // Align with text
+                            Expanded(
+                              child: Text(
+                                !state.isBluetoothEnabled
+                                    ? 'Status: Service Off'
+                                    : state.isBleConnected && state.connectedDeviceName != null
+                                        ? 'Status: Connected - ${state.connectedDeviceName} (${state.connectedDeviceMac})'
+                                        : 'Status: Disconnected',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: CupertinoColors.secondaryLabel,
+                                ),
                               ),
                             ),
                           ],
                         ),
-                        CupertinoSwitch(
-                          value: state.isBluetoothEnabled,
-                          onChanged: (value) => provider.toggleBluetooth(),
-                          activeTrackColor: ColorUtils.main,
-                        ),
+                        if (state.isBluetoothEnabled) ...[
+                          const SizedBox(height: 8),
+                          Row(
+                            children: [
+                              const SizedBox(width: 36),
+                              ElevatedButton(
+                                onPressed: state.isBleConnected
+                                    ? provider.disconnectFromDevice
+                                    : provider.scanAndConnectToBicycleComputer,
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: ColorUtils.main,
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                ),
+                                child: Text(state.isBleConnected ? 'Disconnect' : 'Connect to Device'),
+                              ),
+                            ],
+                          ),
+                        ],
                       ],
                     ),
                   ),

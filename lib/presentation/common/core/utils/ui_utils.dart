@@ -12,7 +12,7 @@ class UIUtils {
   );
 
   /// A function that create the header for a specific title
-  static Column createHeader(title) {
+  static Column createHeader(String title) {
     return Column(children: [
       Container(
         padding: const EdgeInsets.only(left: 0, top: 12),

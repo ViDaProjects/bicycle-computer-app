@@ -74,7 +74,7 @@ class ActivityDetailsViewModel extends StateNotifier<ActivityDetailsState> {
   }
 
   /// Sets the mode to edit the activity.
-  editType() {
+  void editType() {
     state = state.copyWith(isEditing: true);
   }
 

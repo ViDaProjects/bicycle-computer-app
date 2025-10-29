@@ -33,7 +33,30 @@ class ActivityListScreen extends HookConsumerWidget {
                 children: [
                   activityStateProvider.when(
                     data: (initialData) {
-                      return ActivityList(
+                      return initialData.list.isEmpty
+                          ? Center(
+                              child: Container(
+                                height: 200,
+                                padding: const EdgeInsets.all(16),
+                                margin: const EdgeInsets.symmetric(horizontal: 16),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(12),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.grey.withValues(alpha: 0.1),
+                                      spreadRadius: 1,
+                                      blurRadius: 5,
+                                      offset: const Offset(0, 2),
+                                    ),
+                                  ],
+                                ),
+                                child: const Center(
+                                  child: Text('No activities on database'),
+                                ),
+                              ),
+                            )
+                          : ActivityList(
                         id: InfiniteScrollListEnum.myActivities.toString(),
                         activities: initialData.list,
                         total: initialData.total,
