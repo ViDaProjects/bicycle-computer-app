@@ -108,8 +108,31 @@ class SettingsViewModel extends StateNotifier<SettingsState> {
   void toggleBluetooth(bool enabled) async {
     // Set loading
     state = state.copyWith(isLoading: true);
-    // Just set the app-level preference for BLE service
+
+    if (enabled) {
+      // Request permissions when enabling BLE via Android side
+      try {
+        await _channel.invokeMethod('requestPermissions');
+      } catch (e) {
+        // Handle errors if needed
+      }
+    }
+
+    // Control BLE service on Android side
+    try {
+      await _channel.invokeMethod('setBleEnabled', {'enabled': enabled});
+    } catch (e) {
+      // Handle errors if needed
+      state = state.copyWith(isLoading: false);
+      return;
+    }
+
+    // Update status after changing service state
     await _updateConnectedStatus();
+    if (enabled) {
+      _updateLocalDeviceInfo();
+    }
+
     state = state.copyWith(isBluetoothEnabled: enabled, isLoading: false);
     if (!enabled) {
       state = state.copyWith(isBleConnected: false, connectedDeviceName: null, connectedDeviceMac: null);
