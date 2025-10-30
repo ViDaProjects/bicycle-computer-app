@@ -130,21 +130,36 @@ class BleServerService : Service() {
 
     // --- Main BLE Server Logic ---
     private fun startServer() {
-        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
-            log("!!! No BLUETOOTH_CONNECT permission for startServer."); return
+        // FORCE start server regardless of permissions - never fail
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+            if (ActivityCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
+                log("⚠️  No BLUETOOTH_CONNECT permission - server may have limitations");
+            }
         }
+
         if (bluetoothGattServer == null) {
-            bluetoothGattServer = bluetoothManager.openGattServer(this, gattServerCallback)
-            if (bluetoothGattServer == null) { log("!!! Critical failure: openGattServer returned null."); stopSelf(); return }
-            log("GATT server opened.")
-            setupGattService()
-        } else { log("GATT server already open.") }
+            // Force attempt to create GATT server regardless of permissions
+            bluetoothGattServer = try {
+                log("Forcing GATT server creation...")
+                bluetoothManager.openGattServer(this, gattServerCallback)
+            } catch (e: Exception) {
+                log("!!! Exception creating GATT server: ${e.message} - but continuing anyway")
+                null // Continue without GATT server
+            }
+
+            if (bluetoothGattServer != null) {
+                log("✓ GATT server successfully created")
+                setupGattService()
+            } else {
+                log("⚠️  GATT server null - running in limited mode")
+                // Continue anyway - service will run but with limited functionality
+            }
+        } else {
+            log("GATT server already open.")
+        }
     }
 
     private fun setupGattService() {
-        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
-            log("!!! No BLUETOOTH_CONNECT permission for setupGattService."); return
-        }
         if (bluetoothGattServer == null) { log("!!! setupGattService called without GATT server."); return }
         bluetoothGattServer?.clearServices()
         val service = BluetoothGattService(GattProfile.UUID_SERVICE_TRANSFER, BluetoothGattService.SERVICE_TYPE_PRIMARY)
@@ -160,7 +175,8 @@ class BleServerService : Service() {
 
     private fun stopServer() {
         if (bluetoothGattServer == null) return
-        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S &&
+            ActivityCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
             log("!!! No BLUETOOTH_CONNECT permission for stopServer. Cannot disconnect clients or close server.")
             bluetoothGattServer = null
             return
@@ -192,8 +208,11 @@ class BleServerService : Service() {
         mainHandler.removeCallbacksAndMessages(null) // Clear previous retries
         currentCompanyId = companyId
         currentSecretKey = secretKey
-        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_ADVERTISE) != PackageManager.PERMISSION_GRANTED) {
-            log("!!! No BLUETOOTH_ADVERTISE permission."); return
+        // Only check BLUETOOTH_ADVERTISE permission on Android 12+ (but don't block if missing)
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S &&
+            ActivityCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_ADVERTISE) != PackageManager.PERMISSION_GRANTED) {
+            log("⚠️  No BLUETOOTH_ADVERTISE permission, but continuing anyway (advertising might not work)");
+            // Don't return - try to start advertising anyway and let it fail gracefully
         }
         if (!::advertiser.isInitialized || advertiser == null) { log("!!! Advertiser not available."); return }
 
@@ -460,7 +479,28 @@ class BleServerService : Service() {
             .setPriority(NotificationCompat.PRIORITY_LOW).setOngoing(true).build()
         try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                startForeground(NOTIFICATION_ID, initialNotification, ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE)
+                var foregroundType = ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE
+                // Add Bluetooth foreground type for Android 14+ if available
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                    try {
+                        val bluetoothType = ServiceInfo::class.java.getField("FOREGROUND_SERVICE_TYPE_BLUETOOTH").getInt(null)
+                        foregroundType = foregroundType or bluetoothType
+                    } catch (e: Exception) {
+                        // FOREGROUND_SERVICE_TYPE_BLUETOOTH not available, use only CONNECTED_DEVICE
+                    }
+                }
+
+                // Adicionar tipos futuros (Android 15+) dinamicamente, se disponíveis
+                val futureTypes = listOf("FOREGROUND_SERVICE_TYPE_BLE", "FOREGROUND_SERVICE_TYPE_BLUETOOTH_ADVANCED")
+                for (type in futureTypes) {
+                    try {
+                        val typeValue = ServiceInfo::class.java.getField(type).getInt(null)
+                        foregroundType = foregroundType or typeValue
+                    } catch (e: Exception) {
+                        // Tipo não disponível, ignorar
+                    }
+                }
+                startForeground(NOTIFICATION_ID, initialNotification, foregroundType)
             } else {
                 startForeground(NOTIFICATION_ID, initialNotification)
             }

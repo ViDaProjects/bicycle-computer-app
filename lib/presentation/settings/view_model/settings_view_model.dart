@@ -75,18 +75,9 @@ class SettingsViewModel extends StateNotifier<SettingsState> {
 
   /// Scan for BLE devices advertising the bicycle computer service
   Future<void> scanAndConnectToBicycleComputer() async {
-    // Request permissions first
-    final permissionService = PermissionService();
-    final hasPermission = await permissionService.checkAllPermissionsGranted();
-    if (!hasPermission) {
-      await _channel.invokeMethod('requestPermissions');
-      final newCheck = await permissionService.checkAllPermissionsGranted();
-      if (!newCheck) {
-        return;
-      }
-    }
-
     try {
+      // Request permissions via Android native code
+      await _channel.invokeMethod('requestPermissions');
       await _channel.invokeMethod('scanAndConnectToDevice');
       await _updateConnectedStatus();
     } catch (e) {
@@ -109,33 +100,35 @@ class SettingsViewModel extends StateNotifier<SettingsState> {
     // Set loading
     state = state.copyWith(isLoading: true);
 
-    if (enabled) {
-      // Request permissions when enabling BLE via Android side
-      try {
-        await _channel.invokeMethod('requestPermissions');
-      } catch (e) {
-        // Handle errors if needed
-      }
-    }
-
-    // Control BLE service on Android side
     try {
-      await _channel.invokeMethod('setBleEnabled', {'enabled': enabled});
+      // Request permissions first if enabling
+      if (enabled) {
+        await _channel.invokeMethod('requestPermissions');
+      }
+
+      // Control BLE service on Android side
+      final result = await _channel.invokeMethod('setBleEnabled', {'enabled': enabled}) as bool?;
+
+      if (enabled && result == false) {
+        // Failed - was likely permissions denied. Show error to user
+        state = state.copyWith(isLoading: false);
+        return;
+      }
+
+      // Success - update UI state
+      state = state.copyWith(isBluetoothEnabled: enabled, isLoading: false);
+      if (enabled) {
+        await _updateLocalDeviceInfo();
+      }
+      await _updateConnectedStatus();
+
+      if (!enabled) {
+        state = state.copyWith(isBleConnected: false, connectedDeviceName: null, connectedDeviceMac: null);
+      }
+
     } catch (e) {
-      // Handle errors if needed
+      // Handle errors
       state = state.copyWith(isLoading: false);
-      return;
-    }
-
-    // Update status after changing service state
-    await _updateConnectedStatus();
-    if (enabled) {
-      _updateLocalDeviceInfo();
-    }
-
-    state = state.copyWith(isBluetoothEnabled: enabled, isLoading: false);
-    if (!enabled) {
-      state = state.copyWith(isBleConnected: false, connectedDeviceName: null, connectedDeviceMac: null);
     }
   }
 

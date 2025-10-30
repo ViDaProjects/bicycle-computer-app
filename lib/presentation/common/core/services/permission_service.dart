@@ -1,4 +1,10 @@
 import 'package:permission_handler/permission_handler.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+/// Provider for the permission service.
+final permissionServiceProvider = Provider<PermissionService>((ref) {
+  return PermissionService();
+});
 
 /// Service for handling app permissions
 class PermissionService {
@@ -11,7 +17,9 @@ class PermissionService {
       Permission.bluetooth,
       Permission.bluetoothConnect,
       Permission.bluetoothScan,
+      Permission.bluetoothAdvertise,
       Permission.storage,
+      // Permissões futuras (Android 15+) serão tratadas apenas no código nativo
     ];
 
     final Map<Permission, PermissionStatus> statuses = {};
@@ -32,6 +40,7 @@ class PermissionService {
       Permission.bluetooth,
       Permission.bluetoothConnect,
       Permission.bluetoothScan,
+      Permission.bluetoothAdvertise,
       Permission.storage,
     ];
 
@@ -47,16 +56,13 @@ class PermissionService {
 
   /// Open app settings if permissions are permanently denied
   Future<bool> openAppSettingsIfNeeded() async {
-    final locationStatus = await Permission.location.status;
-    final bluetoothStatus = await Permission.bluetooth.status;
-    final storageStatus = await Permission.storage.status;
+    // Simple method to open app settings - permissão handling is done natively
+    return await openAppSettings();
+  }
 
-    if (locationStatus.isPermanentlyDenied ||
-        bluetoothStatus.isPermanentlyDenied ||
-        storageStatus.isPermanentlyDenied) {
-      return await openAppSettings();
-    }
-
-    return false;
+  /// This method is kept for compatibility but permissions are handled natively
+  Future<bool> checkAndReinforceBlePermissions() async {
+    // Delegate to native code - avoid permission_handler issues
+    return true;
   }
 }

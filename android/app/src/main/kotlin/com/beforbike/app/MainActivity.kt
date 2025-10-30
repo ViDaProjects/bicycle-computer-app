@@ -124,8 +124,12 @@ class MainActivity: FlutterActivity() {
                 "setBleEnabled" -> {
                     val enabled = call.argument<Boolean>("enabled") ?: false
                     if (enabled) {
+                        // ALWAYS start BLE service when requested - never fail due to permissions
+                        Log.d("BLE", "Starting BLE service (always attempt regardless of permissions)")
                         startBleServerService()
+                        Log.d("BLE", "BLE service start command sent")
                     } else {
+                        Log.d("BLE", "Stopping BLE service")
                         stopBleServerService()
                     }
                     result.success(true)
@@ -162,22 +166,34 @@ class MainActivity: FlutterActivity() {
     }
 
     private fun requestBlePermissions() {
+        // Always request all BLE-related permissions regardless of current status
+        // This ensures we get the latest permission state
         val permissions = listOf(
             Manifest.permission.ACCESS_FINE_LOCATION,
-            Manifest.permission.ACCESS_BACKGROUND_LOCATION,
             Manifest.permission.BLUETOOTH,
             Manifest.permission.BLUETOOTH_ADMIN,
-            Manifest.permission.BLUETOOTH_SCAN,
-            Manifest.permission.BLUETOOTH_CONNECT,
-            Manifest.permission.BLUETOOTH_ADVERTISE,
+        ).plus(
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+                listOf(
+                    Manifest.permission.BLUETOOTH_SCAN,
+                    Manifest.permission.BLUETOOTH_CONNECT,
+                    Manifest.permission.BLUETOOTH_ADVERTISE,
+                )
+            } else emptyList()
         )
+
         val missingPermissions = permissions.filter {
             ContextCompat.checkSelfPermission(this, it) != PackageManager.PERMISSION_GRANTED
         }.toTypedArray()
+
         if (missingPermissions.isNotEmpty()) {
+            Log.d("BLE", "Requesting permissions: ${missingPermissions.joinToString()}")
             ActivityCompat.requestPermissions(this, missingPermissions, 1)
+        } else {
+            Log.d("BLE", "All permissions already granted")
         }
     }
+
 
     private fun scanAndConnectDevice() {
         if (!bluetoothAdapter.isEnabled) {
