@@ -18,15 +18,18 @@ import android.os.Handler
 import android.os.Looper
 import android.os.IBinder
 import android.util.Log
+import androidx.annotation.RequiresPermission
 import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
 import org.json.JSONObject
+import org.json.JSONArray
 import java.text.SimpleDateFormat
 import java.util.*
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
-import java.util.zip.InflaterInputStream
+import java.util.zip.GZIPInputStream
+//import java.util.zip.InflaterInputStream
 
 class BleServerService : Service() {
 
@@ -115,6 +118,7 @@ class BleServerService : Service() {
         return START_NOT_STICKY
     }
 
+    @RequiresPermission(Manifest.permission.BLUETOOTH_ADVERTISE)
     override fun onDestroy() {
         super.onDestroy()
         log("Service destroying (onDestroy)...")
@@ -220,6 +224,7 @@ class BleServerService : Service() {
         catch (e: Exception) { isAdvertising = false; log("!!! GENERAL EXCEPTION in startAdvertising: ${e.message}") }
     }
 
+    @RequiresPermission(Manifest.permission.BLUETOOTH_ADVERTISE)
     private fun stopAdvertising() {
         mainHandler.removeCallbacksAndMessages(null) // Cancel any pending retries
         if (!::advertiser.isInitialized || advertiser == null) {
@@ -242,6 +247,7 @@ class BleServerService : Service() {
 
     // Receiver (no changes)
     private val commandReceiver = object : BroadcastReceiver() {
+        @RequiresPermission(Manifest.permission.BLUETOOTH_ADVERTISE)
         override fun onReceive(context: Context?, intent: Intent?) {
             when (intent?.action) {
                 ACTION_START_ADVERTISING -> {
@@ -259,11 +265,13 @@ class BleServerService : Service() {
     }
 
     // --- Received Data Processing ---
+// [No arquivo BleServerService.kt]
+
     private fun processReceivedData(deviceAddress: String, data: ByteArray): Boolean {
         try {
             var jsonString: String
 
-            // Try to decompress if GZIP
+            // 1. Descomprimir (lógica Gzip/descompressão permanece a mesma)
             if (isGzipped(data)) {
                 log("Compressed data detected (${data.size} bytes), decompressing...")
                 jsonString = decompressGzip(data)
@@ -273,56 +281,79 @@ class BleServerService : Service() {
                 log("Uncompressed data: ${jsonString.length} characters")
             }
 
-            // Process as JSONL (lines separated by \n)
-            val lines = jsonString.trim().split("\n").filter { it.isNotBlank() }
-            log("Processing ${lines.size} JSONL line(s)")
+            // 2. Carrega o Array de strings (JSON Array)
+            val jsonArray = JSONArray(jsonString.trim())
+            log("Processing ${jsonArray.length()} items from received JSON Array")
 
             var totalSaved = 0
-            for (line in lines) {
+            var rideIdFromJson = -1L // Para rastrear o rideId do lote
+
+            for (i in 0 until jsonArray.length()) {
                 try {
-                    val jsonObj = JSONObject(line.trim())
-                    val rideIdFromJson = jsonObj.optLong("ride_id", -1L)
+                    // 'line' é a string: {"info":{...}, "gps":{...}, "crank":{...}}
+                    val line = jsonArray.getString(i)
+                    val jsonObj = JSONObject(line.trim()) // Carrega o objeto principal
 
+                    // 3. Extrai os objetos aninhados do JSON
+                    val infoObj = jsonObj.optJSONObject("info")
+                    val gpsObj = jsonObj.optJSONObject("gps")
+                    val crankObj = jsonObj.optJSONObject("crank") // Pode ser nulo
+
+                    // 4. Validação essencial (info e gps são obrigatórios)
+                    if (infoObj == null || gpsObj == null) {
+                        log("!!! JSON item missing 'info' or 'gps' object. Skipping item $i")
+                        continue
+                    }
+
+                    // 5. Pega o ride_id (assumindo que está em 'info')
+                    rideIdFromJson = infoObj.optLong("ride_id", -1L) // (Sua suposição)
                     if (rideIdFromJson <= 0) {
-                        log("!!! JSON without valid 'ride_id' in line: $line")
+                        log("!!! JSON 'info' object without valid 'ride_id' in item: $line")
                         continue
                     }
 
-                    if (!dbHelper.ensureRideExists(rideIdFromJson)) {
+                    // 6. Garante que a "Corrida" (Tabela 1) exista
+                    // Pega a data/hora do pacote para usar como 'start_time' da corrida
+                    val startTime = infoObj.optString("date") + " " + infoObj.optString("time")
+                    if (!dbHelper.ensureRideExists(rideIdFromJson, startTime)) {
                         log("!!! Failed to ensure/create ride ID $rideIdFromJson")
-                        continue
+                        continue // Falha crítica no DB, pula este item
                     }
 
-                    val power = jsonObj.optDouble("power", Double.NaN)
-                    val lat = jsonObj.optDouble("latitude", Double.NaN)
-                    val lon = jsonObj.optDouble("longitude", Double.NaN)
-                    val alt = jsonObj.optDouble("altitude", Double.NaN)
-                    val vel = jsonObj.optDouble("velocity", Double.NaN)
-                    val cad = jsonObj.optDouble("cadence", Double.NaN)
+                    // 7. Converte os JSONObjects em Maps (para o DbHelper)
+                    val infoMap = infoObj.toMap()
+                    val gpsMap = gpsObj.toMap()
+                    val crankMap = crankObj?.toMap() // Será null se crankObj for nulo
 
-                    var savedCount = 0
-                    if (power.isFinite()) { if (dbHelper.insertPower(rideIdFromJson, power.toFloat())) savedCount++ }
-                    if (lat.isFinite() && lon.isFinite()) {
-                        val altF = if (alt.isFinite()) alt.toFloat() else null
-                        if (dbHelper.insertMapData(rideIdFromJson, lat.toFloat(), lon.toFloat(), altF)) savedCount++
-                    }
-                    if (vel.isFinite()) { if (dbHelper.insertVelocity(rideIdFromJson, vel.toFloat())) savedCount++ }
-                    if (cad.isFinite()) { if (dbHelper.insertCadence(rideIdFromJson, cad.toFloat())) savedCount++ }
+                    // 8. Chama a NOVA função de inserção unificada (Tabela 2)
+                    val success = dbHelper.insertTelemetryData(
+                        rideId = rideIdFromJson,
+                        infoMap = infoMap,
+                        gpsMap = gpsMap,
+                        crankMap = crankMap
+                    )
 
-                    if (savedCount > 0) {
-                        totalSaved += savedCount
+                    if (success) {
+                        totalSaved++
                     }
 
                 } catch (e: Exception) {
-                    log("!!! Error processing JSON line: ${e.message} - Line: $line")
+                    log("!!! Error processing JSON item from array: ${e.message} - Item index: $i")
                 }
             }
 
-            log("Processing completed: $totalSaved data point(s) saved from ${lines.size} line(s)")
+            log("Processing completed: $totalSaved data point(s) saved from ${jsonArray.length()} item(s)")
+
+            // (Opcional) Chamar o cálculo de estatísticas aqui se for o fim
+            // if (totalSaved > 0 && rideIdFromJson > 0) {
+            //     val stats = dbHelper.calculateRideStatistics(rideIdFromJson)
+            //     if (stats != null) dbHelper.updateRideSummary(rideIdFromJson, stats)
+            // }
+
             return true
 
         } catch (e: Exception) {
-            log("!!! General error in data processing: ${e.message}")
+            log("!!! General error in data processing (is data a valid JSONArray?): ${e.message}")
             return false
         }
     }
@@ -334,9 +365,11 @@ class BleServerService : Service() {
 
     private fun decompressGzip(data: ByteArray): String {
         try {
-            // Skip GZIP header (10 bytes) and use InflaterInputStream
-            val inflaterStream = InflaterInputStream(ByteArrayInputStream(data, 10, data.size - 10))
-            return inflaterStream.bufferedReader(Charsets.UTF_8).use { reader: java.io.BufferedReader -> reader.readText() }
+            // USA GZIPInputStream (em vez de InflaterInputStream)
+            val gzipStream = GZIPInputStream(ByteArrayInputStream(data))
+
+            return gzipStream.bufferedReader(Charsets.UTF_8).use { reader: java.io.BufferedReader -> reader.readText() }
+
         } catch (e: Exception) {
             log("GZIP decompression error: ${e.message}")
             throw e
@@ -526,4 +559,41 @@ object BluetoothUtils {
             else -> "Estado $state"
         }
     }
+}
+// [No arquivo BleServerService.kt, cole estas funções]
+
+/**
+ * Converte um JSONObject em um Map<String, Any?>.
+ */
+fun JSONObject.toMap(): Map<String, Any?> {
+    val map = mutableMapOf<String, Any?>()
+    val keysItr = this.keys()
+    while (keysItr.hasNext()) {
+        val key = keysItr.next()
+        var value = this.get(key)
+        when (value) {
+            is JSONArray -> value = value.toList()
+            is JSONObject -> value = value.toMap()
+            JSONObject.NULL -> value = null
+        }
+        map[key] = value
+    }
+    return map
+}
+
+/**
+ * Converte um JSONArray em um List<Any?>.
+ */
+fun JSONArray.toList(): List<Any?> {
+    val list = mutableListOf<Any?>()
+    for (i in 0 until this.length()) {
+        var value = this.get(i)
+        when (value) {
+            is JSONArray -> value = value.toList()
+            is JSONObject -> value = value.toMap()
+            JSONObject.NULL -> value = null
+        }
+        list.add(value)
+    }
+    return list
 }
