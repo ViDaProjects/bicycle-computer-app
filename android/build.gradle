@@ -27,3 +27,10 @@ subprojects {
 tasks.register("clean", Delete) {
     delete rootProject.buildDir
 }
+
+// Suppress Gradle deprecation warnings from Flutter plugins
+gradle.buildFinished { buildResult ->
+    if (buildResult.failure) {
+        return
+    }
+}

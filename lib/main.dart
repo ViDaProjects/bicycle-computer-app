@@ -73,6 +73,40 @@ class MyAppViewModel {
   void init() async {
     ref.read(textToSpeechService).init();
     await ref.read(permissionService).requestAllPermissions();
+    await _checkBluetoothStatus();
+  }
+
+  Future<void> _checkBluetoothStatus() async {
+    try {
+      const MethodChannel channel = MethodChannel('com.beforbike.ble');
+
+      // Check if Bluetooth adapter is enabled
+      final isAdapterEnabled = await channel.invokeMethod('isBluetoothAdapterEnabled') as bool;
+      debugPrint('Bluetooth adapter enabled: $isAdapterEnabled');
+
+      if (!isAdapterEnabled) {
+        debugPrint('Requesting user to enable Bluetooth...');
+        // Request user to enable Bluetooth
+        await channel.invokeMethod('requestEnableBluetooth');
+
+        // Wait a bit for user interaction
+        await Future.delayed(const Duration(seconds: 2));
+
+        // Check again
+        final isAdapterEnabledAfter = await channel.invokeMethod('isBluetoothAdapterEnabled') as bool;
+        debugPrint('Bluetooth adapter enabled after request: $isAdapterEnabledAfter');
+
+        if (isAdapterEnabledAfter) {
+          debugPrint('Bluetooth enabled successfully');
+        } else {
+          debugPrint('User did not enable Bluetooth');
+        }
+      } else {
+        debugPrint('Bluetooth is already enabled');
+      }
+    } catch (e) {
+      debugPrint('Error checking Bluetooth status: $e');
+    }
   }
 
   /// Retrieves the localized configuration based on the current locale.

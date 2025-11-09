@@ -6,7 +6,6 @@ import '../../domain/entities/location.dart';
 import '../../domain/entities/page.dart';
 import '../../domain/repositories/activity_repository.dart';
 import '../api/activity_api.dart';
-import '../model/request/activity_request.dart';
 
 /// Provider for the ActivityRepository implementation.
 final activityRepositoryProvider =
@@ -116,20 +115,8 @@ class ActivityRepositoryImpl extends ActivityRepository {
 
   @override
   Future<String?> removeActivity({required String id}) async {
-    // Not implemented for local database
-    throw UnimplementedError('Remove activity not implemented for local database');
+    await platform.invokeMethod('deleteActivity', {'activityId': id});
+    return null; // Success
   }
 
-  @override
-  Future<Activity?> addActivity(ActivityRequest request) async {
-    // Flutter não salva dados - apenas lê do Android
-    // Dados são salvos pelo Android via BLE
-    throw UnimplementedError('Flutter não salva atividades - dados vêm do Android via BLE');
-  }
-
-  @override
-  Future<Activity> editActivity(ActivityRequest request) async {
-    // Not implemented for local database
-    throw UnimplementedError('Edit activity not implemented for local database');
-  }
 }

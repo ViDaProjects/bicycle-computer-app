@@ -80,26 +80,26 @@ class MapScreen extends HookConsumerWidget {
         final latDiff = maxLat - minLat;
         final lngDiff = maxLng - minLng;
 
+        // Add padding to prevent cutting off start/end
+        final paddedLatDiff = latDiff * 1.2;
+        final paddedLngDiff = lngDiff * 1.2;
+
         // If the path is very small (less than 100m), use a high zoom
-        if (latDiff < 0.001 && lngDiff < 0.001) {
+        if (paddedLatDiff < 0.001 && paddedLngDiff < 0.001) {
           debugPrint('Path is very small, using zoom 18.0');
           return 18.0;
         }
 
         // Calculate zoom level based on the larger dimension
-        // Using approximate conversion: 1 degree ≈ 111km
-        const double earthCircumference = 40075; // km
-        const double pixelsPerTile = 256;
-
-        // Calculate the zoom that fits the bounds with some padding
-        final latZoom = (earthCircumference * 1000 / (latDiff * 111000)) / (mapHeight / pixelsPerTile);
-        final lngZoom = (earthCircumference * 1000 / (lngDiff * 111000 * math.cos(maxLat * math.pi / 180))) / (mapWidth / pixelsPerTile);
+        // Formula: zoom = log2( screenPixels * 360 / (diffDegrees * 256 * cos(lat)) )
+        final latZoom = math.log(mapHeight * 360 / (paddedLatDiff * 256)) / math.ln2;
+        final lngZoom = math.log(mapWidth * 360 / (paddedLngDiff * 256 * math.cos(maxLat * math.pi / 180))) / math.ln2;
 
         final optimalZoom = [latZoom, lngZoom].reduce((a, b) => a < b ? a : b);
 
         // Clamp zoom between reasonable bounds
         final clampedZoom = optimalZoom.clamp(8.0, 18.0);
-        debugPrint('Zoom calculation: latDiff=$latDiff, lngDiff=$lngDiff, latZoom=$latZoom, lngZoom=$lngZoom, optimal=$optimalZoom, clamped=$clampedZoom');
+        debugPrint('Zoom calculation: latDiff=$latDiff, lngDiff=$lngDiff, paddedLat=$paddedLatDiff, paddedLng=$paddedLngDiff, latZoom=$latZoom, lngZoom=$lngZoom, optimal=$optimalZoom, clamped=$clampedZoom');
         return clampedZoom;
       } catch (e) {
         // Fallback zoom if calculation fails
@@ -113,11 +113,8 @@ class MapScreen extends HookConsumerWidget {
       if (points.length == 1) return points;
       if (points.length == 2) return points;
 
-      // Limit the number of points to prevent performance issues
-      const int maxPoints = 1000; // Maximum GPS points to process
-      final effectivePoints = points.length > maxPoints
-          ? points.sublist(0, maxPoints)
-          : points;
+      // Process all GPS points without artificial limits
+      final effectivePoints = points;
 
       // Use Catmull-Rom spline interpolation for smooth curves
       final smoothed = <LatLng>[];
@@ -264,7 +261,7 @@ class MapScreen extends HookConsumerWidget {
 
     // Debug logging for zoom calculation
     if (activityPoints.isNotEmpty) {
-      debugPrint('Map zoom calculation: ${activityPoints.length} points, screen: ${mapWidth}x${mapHeight}, optimal zoom: $optimalZoom');
+      debugPrint('Map zoom calculation: ${activityPoints.length} points, screen: $mapWidth x $mapHeight, optimal zoom: $optimalZoom');
     }
 
     return Scaffold(

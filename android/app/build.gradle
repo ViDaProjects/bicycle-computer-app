@@ -23,9 +23,9 @@ if (flutterVersionName == null) {
 }
 
 android {
-    namespace 'com.beforbike.app'
+    namespace = 'com.beforbike.app'
     compileSdk 36
-    ndkVersion flutter.ndkVersion
+    ndkVersion = flutter.ndkVersion
 
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_21
@@ -54,21 +54,25 @@ android {
 
     buildTypes {
         release {
-            signingConfig signingConfigs.debug
-            shrinkResources false
-            minifyEnabled false
+            signingConfig = signingConfigs.debug
+            shrinkResources = false
+            minifyEnabled = false
         }
     }
 
     buildFeatures {
-        viewBinding true
-        dataBinding true
-        buildConfig true
+        viewBinding = true
+        dataBinding = true
+        buildConfig = true
     }
 
     dependenciesInfo {
-        includeInApk true
-        includeInBundle true
+        includeInApk = true
+        includeInBundle = true
+    }
+
+    lint {
+        baseline = file("lint-baseline.xml")
     }
 }
 

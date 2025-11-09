@@ -76,7 +76,6 @@ class DetailsTab extends HookConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(activityDetailsViewModelProvider);
-    final provider = ref.read(activityDetailsViewModelProvider.notifier);
 
     final displayedActivity = state.activity ?? activity;
 
@@ -142,26 +141,6 @@ class DetailsTab extends HookConsumerWidget {
           ),
         ],
       ),
-      floatingActionButton: state.isEditing || state.isLoading
-          ? FloatingActionButton(
-              heroTag: 'save_button',
-              backgroundColor: ColorUtils.main,
-              elevation: 4.0,
-              onPressed: state.isLoading
-                  ? null
-                  : () {
-                      provider.save(displayedActivity);
-                    },
-              child: Icon(
-                Icons.save,
-                color: ColorUtils.white,
-              ),
-            )
-          : const Stack(
-              children: [
-                // Share button removed
-              ],
-            ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
     );
   }

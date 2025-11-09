@@ -167,7 +167,7 @@ class SettingsScreen extends HookConsumerWidget {
                           ),
                           CupertinoSwitch(
                             value: state.showSpeedChart,
-                            onChanged: null, // Disabled - for future Raspberry Pi control
+                            onChanged: (value) => provider.toggleSpeedChart(),
                             activeTrackColor: ColorUtils.main,
                           ),
                         ],
@@ -198,7 +198,7 @@ class SettingsScreen extends HookConsumerWidget {
                           ),
                           CupertinoSwitch(
                             value: state.showCadenceChart,
-                            onChanged: null, // Disabled - for future Raspberry Pi control
+                            onChanged: (value) => provider.toggleCadenceChart(),
                             activeTrackColor: ColorUtils.main,
                           ),
                         ],
@@ -229,7 +229,7 @@ class SettingsScreen extends HookConsumerWidget {
                           ),
                           CupertinoSwitch(
                             value: state.showPowerChart,
-                            onChanged: null, // Disabled - for future Raspberry Pi control
+                            onChanged: (value) => provider.togglePowerChart(),
                             activeTrackColor: ColorUtils.main,
                           ),
                         ],
@@ -260,7 +260,7 @@ class SettingsScreen extends HookConsumerWidget {
                           ),
                           CupertinoSwitch(
                             value: state.showAltitudeChart,
-                            onChanged: null, // Disabled - for future Raspberry Pi control
+                            onChanged: (value) => provider.toggleAltitudeChart(),
                             activeTrackColor: ColorUtils.main,
                           ),
                         ],
@@ -291,7 +291,7 @@ class SettingsScreen extends HookConsumerWidget {
                           ),
                           CupertinoSwitch(
                             value: state.showDistanceTraveled,
-                            onChanged: null, // Disabled - for future Raspberry Pi control
+                            onChanged: (value) => provider.toggleDistanceTraveled(),
                             activeTrackColor: ColorUtils.main,
                           ),
                         ],
@@ -322,7 +322,7 @@ class SettingsScreen extends HookConsumerWidget {
                           ),
                           CupertinoSwitch(
                             value: state.showCalories,
-                            onChanged: null, // Disabled - for future Raspberry Pi control
+                            onChanged: (value) => provider.toggleCalories(),
                             activeTrackColor: ColorUtils.main,
                           ),
                         ],
@@ -353,7 +353,7 @@ class SettingsScreen extends HookConsumerWidget {
                           ),
                           CupertinoSwitch(
                             value: state.showMap,
-                            onChanged: null, // Disabled - map functionality removed
+                            onChanged: (value) => provider.toggleMap(),
                             activeTrackColor: ColorUtils.main,
                           ),
                         ],
@@ -367,7 +367,7 @@ class SettingsScreen extends HookConsumerWidget {
                           padding: const EdgeInsets.all(12),
                           width: double.infinity,
                           decoration: BoxDecoration(
-                            color: ColorUtils.main.withOpacity(0.1),
+                            color: ColorUtils.main.withAlpha(26),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Column(
@@ -409,7 +409,7 @@ class SettingsScreen extends HookConsumerWidget {
                           padding: const EdgeInsets.all(12),
                           width: double.infinity,
                           decoration: BoxDecoration(
-                            border: Border.all(color: ColorUtils.main.withOpacity(0.3)),
+                            border: Border.all(color: ColorUtils.main.withAlpha(77)),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Column(
@@ -420,16 +420,16 @@ class SettingsScreen extends HookConsumerWidget {
                               style: TextStyle(
                                 fontSize: 14,
                                 fontWeight: FontWeight.w600,
-                                color: ColorUtils.main,
+                                color: state.isDarkMode ? Colors.white : Colors.black,
                               ),
                             ),
                             if (state.localDeviceName != null) ...[
                               const SizedBox(height: 4),
                               Text(
                                 'BLE Name: ${state.localDeviceName}',
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontSize: 12,
-                                  color: CupertinoColors.secondaryLabel,
+                                  color: state.isDarkMode ? Colors.white : Colors.black,
                                 ),
                               ),
                             ],
@@ -437,9 +437,9 @@ class SettingsScreen extends HookConsumerWidget {
                                 const SizedBox(height: 2),
                                 Text(
                                   'MAC Address: ${state.localDeviceMac}',
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     fontSize: 12,
-                                    color: CupertinoColors.secondaryLabel,
+                                    color: state.isDarkMode ? Colors.white : Colors.black,
                                   ),
                                 ),
                               ],

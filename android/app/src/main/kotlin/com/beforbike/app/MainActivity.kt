@@ -6,6 +6,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Bundle
+import android.annotation.SuppressLint
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import android.Manifest
@@ -28,7 +29,7 @@ class MainActivity: FlutterActivity() {
     private lateinit var dbHelper: RideDbHelper
     private val SCAN_PERIOD: Long = 10000
     private var scanning = false
-    private val handler = android.os.Handler()
+    private val handler = android.os.Handler(android.os.Looper.getMainLooper())
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -41,13 +42,19 @@ class MainActivity: FlutterActivity() {
         bluetoothAdapter = bluetoothManager.adapter
         bluetoothLeAdvertiser = bluetoothAdapter.bluetoothLeAdvertiser
 
+        // Start BLE service automatically when app launches
+        if (bluetoothAdapter.isEnabled) {
+            Log.d("BLE", "Starting BLE service automatically on app launch")
+            startBleServerService()
+        }
+
         MethodChannel(flutterEngine?.dartExecutor?.binaryMessenger!!, "com.beforbike.app/database").setMethodCallHandler { call, result ->
             when (call.method) {
                 "getAllActivities" -> {
                     val rideIds = dbHelper.getAllRideIds()
                     val activities = mutableListOf<Map<String, Any>>()
                     for (id in rideIds) {
-                        val data = dbHelper.getRideData(id)
+                        val data = dbHelper.getRideSummary(id)
                         if (data != null) {
                             val activity = mapRideToActivity(id, data)
                             activities.add(activity)
@@ -58,25 +65,46 @@ class MainActivity: FlutterActivity() {
                 "getActivityLocations" -> {
                     val activityId = call.argument<String>("activityId") ?: ""
                     val rideId = activityId.toLongOrNull() ?: 0L
-                    val mapData = dbHelper.getRideMapData(rideId)
-                    val locations = mapData.map { data ->
-                        val timestampStr = data.first
-                        val lat = data.second
-                        val lon = data.third
-                        val timestamp = try {
-                            val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS", Locale.getDefault())
-                            dateFormat.parse(timestampStr)?.time ?: System.currentTimeMillis()
-                        } catch (e: Exception) {
-                            System.currentTimeMillis()
-                        }
-                        mapOf(
-                            "id" to "loc_${timestampStr}_${System.currentTimeMillis()}",
-                            "datetime" to timestamp,
-                            "latitude" to lat,
-                            "longitude" to lon
-                        )
+                    val telemetryData = dbHelper.getRideTelemetryData(rideId)
+                    val locations = telemetryData.mapNotNull { data ->
+                        val timestampStr = data["gps_timestamp"] as? String
+                        val lat = data["latitude"] as? Double
+                        val lon = data["longitude"] as? Double
+                        if (timestampStr != null && lat != null && lon != null) {
+                            val timestamp = try {
+                                val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS", Locale.getDefault())
+                                dateFormat.parse(timestampStr)?.time ?: System.currentTimeMillis()
+                            } catch (e: Exception) {
+                                System.currentTimeMillis()
+                            }
+                            mapOf(
+                                "id" to "loc_${timestampStr}_${System.currentTimeMillis()}",
+                                "datetime" to timestamp,
+                                "latitude" to lat,
+                                "longitude" to lon
+                            )
+                        } else null
                     }
                     result.success(locations)
+                }
+                "deleteActivity" -> {
+                    val activityId = call.argument<String>("activityId") ?: ""
+                    val rideId = activityId.toLongOrNull() ?: 0L
+                    dbHelper.deleteRide(rideId)
+                    result.success(null)
+                }
+                "sendData" -> {
+                    val dataList = call.argument<List<Int>>("data")
+                    if (dataList != null) {
+                        val data = ByteArray(dataList.size) { dataList[it].toByte() }
+                        val intent = Intent("com.beforbike.app.SEND_DATA").apply {
+                            putExtra("EXTRA_DATA", data)
+                        }
+                        sendBroadcast(intent)
+                        result.success(null)
+                    } else {
+                        result.error("INVALID_ARGUMENT", "Data is null", null)
+                    }
                 }
                 else -> {
                     result.notImplemented()
@@ -91,7 +119,19 @@ class MainActivity: FlutterActivity() {
                     result.success(true)
                 }
                 "isBleEnabled" -> {
+                    result.success(isBleServiceRunning())
+                }
+                "isBluetoothAdapterEnabled" -> {
                     result.success(bluetoothAdapter.isEnabled)
+                }
+                "requestEnableBluetooth" -> {
+                    if (!bluetoothAdapter.isEnabled) {
+                        val enableBtIntent = Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE)
+                        startActivityForResult(enableBtIntent, 1)
+                        result.success(true)
+                    } else {
+                        result.success(false) // Already enabled
+                    }
                 }
                 "scanAndConnectToDevice" -> {
                     scanAndConnectDevice()
@@ -106,29 +146,50 @@ class MainActivity: FlutterActivity() {
                     result.success(status)
                 }
                 "getConnectedDeviceName" -> {
-                    val name = connectedDevice?.name ?: "Unknown Device"
+                    val name = if (ActivityCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED) {
+                        connectedDevice?.name ?: "Unknown Device"
+                    } else {
+                        "Permission denied"
+                    }
                     result.success(name)
                 }
                 "getConnectedDeviceMac" -> {
-                    val mac = connectedDevice?.address ?: ""
+                    val mac = if (ActivityCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED) {
+                        connectedDevice?.address ?: ""
+                    } else {
+                        "Permission denied"
+                    }
                     result.success(mac)
                 }
                 "getLocalBluetoothName" -> {
-                    val name = bluetoothAdapter.name ?: "Unknown"
+                    val name = if (ActivityCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED) {
+                        bluetoothAdapter.name ?: "Unknown"
+                    } else {
+                        "Permission denied"
+                    }
                     result.success(name)
                 }
                 "getLocalBluetoothMac" -> {
-                    val mac = bluetoothAdapter.address ?: ""
+                    @SuppressLint("MissingPermission")
+                    val mac = if (ActivityCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED &&
+                        ActivityCompat.checkSelfPermission(this, "android.permission.LOCAL_MAC_ADDRESS") == PackageManager.PERMISSION_GRANTED) {
+                        bluetoothAdapter.address ?: ""
+                    } else {
+                        "Permission denied"
+                    }
                     result.success(mac)
                 }
                 "setBleEnabled" -> {
                     val enabled = call.argument<Boolean>("enabled") ?: false
-                    if (enabled) {
-                        // ALWAYS start BLE service when requested - never fail due to permissions
+                    val isRunning = isBleServiceRunning()
+
+                    if (enabled && !isRunning) {
+                        // Start BLE service if not already running
                         Log.d("BLE", "Starting BLE service (always attempt regardless of permissions)")
                         startBleServerService()
                         Log.d("BLE", "BLE service start command sent")
-                    } else {
+                    } else if (!enabled && isRunning) {
+                        // Stop BLE service if running
                         Log.d("BLE", "Stopping BLE service")
                         stopBleServerService()
                     }
@@ -140,7 +201,7 @@ class MainActivity: FlutterActivity() {
                 }
                 "getRideData" -> {
                     val rideId = call.argument<Long>("rideId") ?: 0L
-                    val data = dbHelper.getRideData(rideId)
+                    val data = dbHelper.getRideSummary(rideId)
                     result.success(data)
                 }
                 "calculateRideStatistics" -> {
@@ -150,13 +211,24 @@ class MainActivity: FlutterActivity() {
                 }
                 "getRideVelocities" -> {
                     val rideId = call.argument<Long>("rideId") ?: 0L
-                    val velocities = dbHelper.getRideVelocities(rideId)
-                    result.success(velocities.map { it.second.toString() }) // Simplified
+                    val telemetryData = dbHelper.getRideTelemetryData(rideId)
+                    val velocities = telemetryData.mapNotNull { data ->
+                        data["gps_speed"] as? Double ?: data["crank_speed"] as? Double
+                    }
+                    result.success(velocities.map { it.toString() }) // Simplified
                 }
                 "getRideMapData" -> {
                     val rideId = call.argument<Long>("rideId") ?: 0L
-                    val mapData = dbHelper.getRideMapData(rideId)
-                    result.success(mapData.map { "${it.first}:${it.second}:${it.third}" }) // Simplified
+                    val telemetryData = dbHelper.getRideTelemetryData(rideId)
+                    val mapData = telemetryData.mapNotNull { data ->
+                        val timestamp = data["gps_timestamp"] as? String
+                        val lat = data["latitude"] as? Double
+                        val lon = data["longitude"] as? Double
+                        if (timestamp != null && lat != null && lon != null) {
+                            "$timestamp:$lat:$lon"
+                        } else null
+                    }
+                    result.success(mapData) // Simplified
                 }
                 else -> {
                     result.notImplemented()
@@ -214,6 +286,7 @@ class MainActivity: FlutterActivity() {
                 if (data?.serviceUuids?.contains(ParcelUuid.fromString("12345678-1234-5678-1234-56789abcdef0")) == true) {
                     // Found bike computer
                     connectToDevice(device)
+                    @SuppressLint("MissingPermission")
                     scanner.stopScan(this)
                 }
             }
@@ -240,11 +313,16 @@ class MainActivity: FlutterActivity() {
     }
 
     private fun connectToDevice(device: BluetoothDevice) {
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
+            Log.e("BLE", "No connect permission")
+            return
+        }
         connectedDevice = device
         bluetoothGatt = device.connectGatt(this, false, object : BluetoothGattCallback() {
             override fun onConnectionStateChange(gatt: BluetoothGatt, status: Int, newState: Int) {
                 if (newState == BluetoothProfile.STATE_CONNECTED) {
                     Log.i("BLE", "Connected to ${device.address}")
+                    @SuppressLint("MissingPermission")
                     gatt.discoverServices()
                 } else if (newState == BluetoothProfile.STATE_DISCONNECTED) {
                     Log.i("BLE", "Disconnected from ${device.address}")
@@ -262,10 +340,24 @@ class MainActivity: FlutterActivity() {
     }
 
     private fun disconnectDevice() {
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
+            Log.e("BLE", "No connect permission")
+            return
+        }
         bluetoothGatt?.disconnect()
         bluetoothGatt?.close()
         bluetoothGatt = null
         connectedDevice = null
+    }
+
+    private fun isBleServiceRunning(): Boolean {
+        val manager = getSystemService(Context.ACTIVITY_SERVICE) as android.app.ActivityManager
+        for (service in manager.getRunningServices(Int.MAX_VALUE)) {
+            if (BleServerService::class.java.name == service.service.className) {
+                return true
+            }
+        }
+        return false
     }
 
     private fun startBleServerService() {
@@ -279,24 +371,26 @@ class MainActivity: FlutterActivity() {
     }
 
     private fun mapRideToActivity(rideId: Long, data: Map<String, Any?>?): Map<String, Any> {
-        val stats = dbHelper.calculateRideStatistics(rideId) ?: emptyMap()
         val currentTime = System.currentTimeMillis()
 
-        // Debug logging
-        Log.d("BeForBike", "Stats for ride $rideId: $stats")
-        Log.d("BeForBike", "Distance: ${stats["distance"]}, Calories: ${stats["calories"]}, Duration: ${stats["duration"]}")
+        // Parse start and end times from strings
+        val startTimeStr = data?.get("start_time") as? String
+        val endTimeStr = data?.get("end_time") as? String
+        val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS", Locale.getDefault())
+        val startTime = try { dateFormat.parse(startTimeStr ?: "")?.time ?: currentTime } catch (e: Exception) { currentTime }
+        val endTime = try { dateFormat.parse(endTimeStr ?: "")?.time ?: (currentTime + 1000) } catch (e: Exception) { currentTime + 1000 }
 
         return mapOf(
             "id" to rideId.toString(),
-            "startDatetime" to (stats["startTime"] as? Long ?: currentTime),
-            "endDatetime" to (stats["endTime"] as? Long ?: currentTime + 1000),
-            "distance" to (stats["distance"] ?: 0.0),
-            "speed" to (stats["meanVelocity"] ?: 0.0),
-            "cadence" to 90.0,
-            "calories" to (stats["calories"] ?: 0.0),
-            "power" to 160.0,
-            "altitude" to 900.0,
-            "time" to (stats["duration"] ?: 0.0),
+            "startDatetime" to startTime,
+            "endDatetime" to endTime,
+            "distance" to (data?.get("total_distance_km") as? Double ?: 0.0),
+            "speed" to (data?.get("avg_velocity_kmh") as? Double ?: 0.0),
+            "cadence" to (data?.get("avg_cadence") as? Double ?: 0.0),
+            "calories" to (data?.get("calories") as? Double ?: 0.0),
+            "power" to (data?.get("avg_power") as? Double ?: 0.0),
+            "altitude" to 900.0, // Placeholder
+            "time" to ((endTime - startTime) / 1000.0), // Duration in seconds
         )
     }
 

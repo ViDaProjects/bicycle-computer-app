@@ -17,7 +17,7 @@ class AudioService {
     if (_isInitialized) return;
 
     try {
-      _hasVibrator = await Vibration.hasVibrator() ?? false;
+      _hasVibrator = await Vibration.hasVibrator();
       _isInitialized = true;
       debugPrint('AudioService initialized with vibration support: $_hasVibrator');
     } catch (e) {

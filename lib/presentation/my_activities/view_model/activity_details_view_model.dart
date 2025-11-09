@@ -3,10 +3,6 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:latlong2/latlong.dart';
 
-import '../../../core/utils/storage_utils.dart';
-import '../../../data/api/activity_api.dart';
-import '../../../data/model/request/activity_request.dart';
-import '../../../data/model/request/location_request.dart';
 import '../../../data/repositories/activity_repository_impl.dart';
 import '../../../domain/entities/activity.dart';
 import '../../../main.dart';
@@ -73,37 +69,4 @@ class ActivityDetailsViewModel extends StateNotifier<ActivityDetailsState> {
     });
   }
 
-  /// Sets the mode to edit the activity.
-  void editType() {
-    state = state.copyWith(isEditing: true);
-  }
-
-  /// Saves the activity.
-  void save(Activity activity) {
-    state = state.copyWith(isEditing: false, isLoading: true);
-
-    ref
-        .read(activityRepositoryProvider)
-        .editActivity(ActivityRequest(
-            id: activity.id,
-            startDatetime: activity.startDatetime,
-            endDatetime: activity.endDatetime,
-            distance: activity.distance,
-            locations: activity.locations
-                .map((l) => LocationRequest(
-                    id: l.id,
-                    datetime: l.datetime,
-                    latitude: l.latitude,
-                    longitude: l.longitude))
-                .toList()))
-        .then((activityEdited) {
-      StorageUtils.removeCachedDataFromUrl(
-          '${ActivityApi.url}${activityEdited.id}');
-      state = state.copyWith(activity: activityEdited);
-      ActivityUtils.updateActivity(
-          ref, activityEdited, ActivityUpdateActionEnum.edit);
-    }).whenComplete(() {
-      state = state.copyWith(isLoading: false);
-    });
-  }
 }

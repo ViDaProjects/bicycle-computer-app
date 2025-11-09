@@ -1,4 +1,3 @@
-import '../../data/model/request/activity_request.dart';
 import '../entities/activity.dart';
 import '../entities/page.dart';
 
@@ -19,10 +18,4 @@ abstract class ActivityRepository {
 
   /// Removes an activity by its ID.
   Future<String?> removeActivity({required String id});
-
-  /// Adds a new activity.
-  Future<Activity?> addActivity(ActivityRequest request);
-
-  /// Edits an existing activity.
-  Future<Activity> editActivity(ActivityRequest request);
 }

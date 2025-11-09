@@ -54,6 +54,8 @@ class BleServerService : Service() {
         const val EXTRA_LOG_MESSAGE = "EXTRA_LOG_MESSAGE"
         const val ACTION_START_ADVERTISING = "com.beforbike.app.START_ADVERTISING"
         const val ACTION_STOP_ADVERTISING = "com.beforbike.app.STOP_ADVERTISING"
+        const val ACTION_SEND_DATA = "com.beforbike.app.SEND_DATA"
+        const val EXTRA_DATA = "EXTRA_DATA"
         const val EXTRA_COMPANY_ID = "EXTRA_COMPANY_ID"
         const val EXTRA_SECRET_KEY = "EXTRA_SECRET_KEY"
         internal const val DEFAULT_COMPANY_ID = 0xF0F0
@@ -100,7 +102,7 @@ class BleServerService : Service() {
         } catch (e: Exception) { log("!!! Error getting Advertiser: ${e.message}."); stopSelf(); return }
 
         createNotificationChannel()
-        val intentFilter = IntentFilter().apply { addAction(ACTION_START_ADVERTISING); addAction(ACTION_STOP_ADVERTISING) }
+        val intentFilter = IntentFilter().apply { addAction(ACTION_START_ADVERTISING); addAction(ACTION_STOP_ADVERTISING); addAction(ACTION_SEND_DATA) }
         ContextCompat.registerReceiver(this, commandReceiver, intentFilter, ContextCompat.RECEIVER_NOT_EXPORTED)
         log("Advertising receiver registered.")
     }
@@ -165,13 +167,23 @@ class BleServerService : Service() {
 
     private fun setupGattService() {
         if (bluetoothGattServer == null) { log("!!! setupGattService called without GATT server."); return }
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
+            log("!!! No BLUETOOTH_CONNECT permission for setupGattService.")
+            return
+        }
         bluetoothGattServer?.clearServices()
         val service = BluetoothGattService(GattProfile.UUID_SERVICE_TRANSFER, BluetoothGattService.SERVICE_TYPE_PRIMARY)
         val dataCharacteristic = BluetoothGattCharacteristic(
             GattProfile.UUID_CHAR_DATA,
-            BluetoothGattCharacteristic.PROPERTY_WRITE or BluetoothGattCharacteristic.PROPERTY_WRITE_NO_RESPONSE,
+            BluetoothGattCharacteristic.PROPERTY_WRITE or BluetoothGattCharacteristic.PROPERTY_WRITE_NO_RESPONSE or BluetoothGattCharacteristic.PROPERTY_NOTIFY,
             BluetoothGattCharacteristic.PERMISSION_WRITE
         )
+        // Add CCCD descriptor for notifications
+        val cccd = BluetoothGattDescriptor(
+            GattProfile.CLIENT_CHARACTERISTIC_CONFIG,
+            BluetoothGattDescriptor.PERMISSION_READ or BluetoothGattDescriptor.PERMISSION_WRITE
+        )
+        dataCharacteristic.addDescriptor(cccd)
         service.addCharacteristic(dataCharacteristic)
         val added = bluetoothGattServer?.addService(service)
         log(if (added == true) "GATT service (${service.uuid}) added." else "!!! Failed to add GATT service.")
@@ -213,12 +225,12 @@ class BleServerService : Service() {
         currentCompanyId = companyId
         currentSecretKey = secretKey
         // Only check BLUETOOTH_ADVERTISE permission on Android 12+ (but don't block if missing)
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S &&
-            ActivityCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_ADVERTISE) != PackageManager.PERMISSION_GRANTED) {
+        val isAndroid12OrHigher = android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S
+        val hasAdvertisePermission = ActivityCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_ADVERTISE) == PackageManager.PERMISSION_GRANTED
+        if (isAndroid12OrHigher && !hasAdvertisePermission) {
             log("⚠️  No BLUETOOTH_ADVERTISE permission, but continuing anyway (advertising might not work)");
             // Don't return - try to start advertising anyway and let it fail gracefully
         }
-        if (!::advertiser.isInitialized || advertiser == null) { log("!!! Advertiser not available."); return }
 
         val settings = AdvertiseSettings.Builder()
             .setAdvertiseMode(AdvertiseSettings.ADVERTISE_MODE_LOW_LATENCY)
@@ -230,7 +242,7 @@ class BleServerService : Service() {
         if (keyBytes.isNotEmpty()) {
             try { dataBuilder.addManufacturerData(companyId, keyBytes)
                 log("Incluindo Manufacturer Data: ID=0x${companyId.toString(16).uppercase(Locale.ROOT)}, Key='${secretKey}'")
-            } catch (e: IllegalArgumentException) { log("!!! Erro Manufacturer Data: ${e.message}"); updateForegroundNotification("ERRO: Manuf. Data Inválido!"); }
+            } catch (e: IllegalArgumentException) { log("!!! Erro Manufacturer Data: ${e.message}"); updateForegroundNotification("ERROR: Invalid Manufacturer Data!"); }
         } else { log("Manufacturer Data Key vazia.") }
 
         val data: AdvertiseData = try { dataBuilder.build() } catch (e: Exception) { log("!!! Erro ao construir AdvertiseData: ${e.message}"); return }
@@ -246,11 +258,6 @@ class BleServerService : Service() {
     @RequiresPermission(Manifest.permission.BLUETOOTH_ADVERTISE)
     private fun stopAdvertising() {
         mainHandler.removeCallbacksAndMessages(null) // Cancel any pending retries
-        if (!::advertiser.isInitialized || advertiser == null) {
-            log("!!! Advertiser not available to stop.")
-            isAdvertising = false;
-            return
-        }
         try {
             log("Stopping advertising...")
             advertiser.stopAdvertising(mAdvertiseCallback)
@@ -279,13 +286,20 @@ class BleServerService : Service() {
                     log("Comando STOP_ADVERTISING recebido.")
                     stopAdvertising()
                 }
+                ACTION_SEND_DATA -> {
+                    val data = intent.getByteArrayExtra(EXTRA_DATA)
+                    if (data != null) {
+                        log("Comando SEND_DATA recebido (${data.size} bytes).")
+                        sendData(data)
+                    } else {
+                        log("!!! Comando SEND_DATA recebido sem dados.")
+                    }
+                }
             }
         }
     }
 
     // --- Received Data Processing ---
-// [No arquivo BleServerService.kt]
-
     private fun processReceivedData(deviceAddress: String, data: ByteArray): Boolean {
         try {
             var jsonString: String
@@ -493,7 +507,7 @@ class BleServerService : Service() {
             log("!!! Sem permissão POST_NOTIFICATIONS para atualizar."); return
         }
         val notification: Notification = NotificationCompat.Builder(this, NOTIFICATION_CHANNEL_ID)
-            .setContentTitle("Servidor BLE Ativo").setContentText(contentText)
+            .setContentTitle("BLE Server Active").setContentText(contentText)
             .setSmallIcon(android.R.drawable.stat_sys_data_bluetooth)
             .setPriority(NotificationCompat.PRIORITY_LOW).setOngoing(true).build()
         val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
@@ -507,7 +521,7 @@ class BleServerService : Service() {
             log("!!! Sem permissão POST_NOTIFICATIONS para iniciar Foreground.")
         }
         val initialNotification: Notification = NotificationCompat.Builder(this, NOTIFICATION_CHANNEL_ID)
-            .setContentTitle("Servidor BLE Ativo").setContentText("Inicializando...")
+            .setContentTitle("BLE Server Active").setContentText("Initializing...")
             .setSmallIcon(android.R.drawable.stat_sys_data_bluetooth)
             .setPriority(NotificationCompat.PRIORITY_LOW).setOngoing(true).build()
         try {
@@ -538,7 +552,7 @@ class BleServerService : Service() {
                 startForeground(NOTIFICATION_ID, initialNotification)
             }
             log("Serviço iniciado em primeiro plano.")
-            updateForegroundNotification("Aguardando conexões e comandos.")
+            updateForegroundNotification("Waiting for connections and commands.")
         } catch (e: Exception) {
             log("!!! Erro ao iniciar startForeground: ${e.message}")
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) { stopSelf() } // Para se falhar no Android 12+
@@ -569,6 +583,43 @@ class BleServerService : Service() {
             AdvertiseCallback.ADVERTISE_FAILED_ALREADY_STARTED -> "ALREADY_STARTED"; AdvertiseCallback.ADVERTISE_FAILED_DATA_TOO_LARGE -> "DATA_TOO_LARGE"
             AdvertiseCallback.ADVERTISE_FAILED_FEATURE_UNSUPPORTED -> "FEATURE_UNSUPPORTED"; AdvertiseCallback.ADVERTISE_FAILED_INTERNAL_ERROR -> "INTERNAL_ERROR"
             AdvertiseCallback.ADVERTISE_FAILED_TOO_MANY_ADVERTISERS -> "TOO_MANY_ADVERTISERS"; else -> "Erro desconhecido $errorCode"
+        }
+    }
+
+    // Function to send data to all connected devices via BLE notification
+    fun sendData(data: ByteArray) {
+        if (bluetoothGattServer == null) {
+            log("!!! Cannot send data: GATT server not initialized")
+            return
+        }
+
+        if (connectedDevices.isEmpty()) {
+            log("No connected devices to send data to")
+            return
+        }
+
+        val service = bluetoothGattServer?.getService(GattProfile.UUID_SERVICE_TRANSFER)
+        val characteristic = service?.getCharacteristic(GattProfile.UUID_CHAR_DATA)
+
+        if (characteristic == null) {
+            log("!!! Cannot send data: characteristic not found")
+            return
+        }
+
+        for (device in connectedDevices) {
+            try {
+                if (ActivityCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
+                    log("⚠️  Cannot send data: BLUETOOTH_CONNECT permission not granted")
+                    continue
+                }
+                // Set characteristic value before notifying (API level 24+ compatible)
+                characteristic.value = data
+                val success = bluetoothGattServer?.notifyCharacteristicChanged(device, characteristic, false)
+                val deviceAddress = try { device.address } catch (ignore: SecurityException) { "Perm. denied" }
+                log("Data sent to $deviceAddress: ${success ?: "null"} (${data.size} bytes)")
+            } catch (e: Exception) {
+                log("!!! Error sending data to device: ${e.message}")
+            }
         }
     }
 }
@@ -610,13 +661,14 @@ fun JSONObject.toMap(): Map<String, Any?> {
     val keysItr = this.keys()
     while (keysItr.hasNext()) {
         val key = keysItr.next()
-        var value = this.get(key)
-        when (value) {
-            is JSONArray -> value = value.toList()
-            is JSONObject -> value = value.toMap()
-            JSONObject.NULL -> value = null
+        val value: Any? = this.get(key)
+        val processedValue = when (value) {
+            is JSONArray -> value.toList()
+            is JSONObject -> value.toMap()
+            JSONObject.NULL -> null
+            else -> value
         }
-        map[key] = value
+        map[key] = processedValue
     }
     return map
 }

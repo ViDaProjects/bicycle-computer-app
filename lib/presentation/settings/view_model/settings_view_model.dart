@@ -9,7 +9,6 @@ import '../../../data/repositories/user_repository_impl.dart';
 import '../../../domain/entities/user.dart';
 import '../../../main.dart';
 import '../../common/core/enums/infinite_scroll_list.enum.dart';
-import '../../common/core/services/permission_service.dart';
 import '../../common/core/utils/color_utils.dart';
 import '../../common/core/widgets/view_model/infinite_scroll_list_view_model.dart';
 import 'state/settings_state.dart';
@@ -24,6 +23,7 @@ final settingsViewModelProvider =
 class SettingsViewModel extends StateNotifier<SettingsState> {
   Ref ref;
   static const MethodChannel _channel = MethodChannel(bleChannel);
+  static const MethodChannel _databaseChannel = MethodChannel('com.beforbike.app/database');
 
   /// Manages the state and logic of the settings screen.
   ///
@@ -31,16 +31,54 @@ class SettingsViewModel extends StateNotifier<SettingsState> {
   SettingsViewModel(this.ref) : super(SettingsState.initial()) {
     // Initialize BLE status
     _updateBluetoothStatus();
+    _loadVisibilitySettings();
+  }
+
+  /// Loads visibility settings from SharedPreferences.
+  Future<void> _loadVisibilitySettings() async {
+    final prefs = await SharedPreferences.getInstance();
+    state = state.copyWith(
+      showSpeedChart: prefs.getBool('showSpeedChart') ?? true,
+      showCadenceChart: prefs.getBool('showCadenceChart') ?? true,
+      showPowerChart: prefs.getBool('showPowerChart') ?? true,
+      showAltitudeChart: prefs.getBool('showAltitudeChart') ?? true,
+      showDistanceTraveled: prefs.getBool('showDistanceTraveled') ?? true,
+      showCalories: prefs.getBool('showCalories') ?? true,
+    );
   }
 
   Future<void> _updateBluetoothStatus() async {
     try {
+      // First check if Bluetooth adapter is enabled
+      final isAdapterEnabled = await _channel.invokeMethod('isBluetoothAdapterEnabled') as bool;
+      if (!isAdapterEnabled) {
+        // Request user to enable Bluetooth
+        await _requestEnableBluetooth();
+        // Check again after request
+        await Future.delayed(const Duration(seconds: 1));
+        final isAdapterEnabledAfter = await _channel.invokeMethod('isBluetoothAdapterEnabled') as bool;
+        if (!isAdapterEnabledAfter) {
+          // User didn't enable Bluetooth, don't start BLE service
+          state = state.copyWith(isBluetoothEnabled: false);
+          return;
+        }
+      }
+
+      // Now check if BLE service is running
       final isEnabled = await _channel.invokeMethod('isBleEnabled') as bool;
       state = state.copyWith(isBluetoothEnabled: isEnabled);
       if (isEnabled) {
         _updateConnectedStatus();
         _updateLocalDeviceInfo();
       }
+    } catch (e) {
+      // Handle errors
+    }
+  }
+
+  Future<void> _requestEnableBluetooth() async {
+    try {
+      await _channel.invokeMethod('requestEnableBluetooth');
     } catch (e) {
       // Handle errors
     }
@@ -140,39 +178,84 @@ class SettingsViewModel extends StateNotifier<SettingsState> {
         state.isDarkMode ? ThemeMode.dark : ThemeMode.light;
   }
 
-  /// Toggles the speed chart visibility (no functionality for now).
+  /// Toggles the speed chart visibility and sends command to bicycle computer.
   void toggleSpeedChart() {
-    state = state.copyWith(showSpeedChart: !state.showSpeedChart);
+    final newValue = !state.showSpeedChart;
+    state = state.copyWith(showSpeedChart: newValue);
+    SharedPreferences.getInstance().then((prefs) {
+      prefs.setBool('showSpeedChart', newValue);
+    });
+    _sendVisibilityCommand('speed', newValue);
   }
 
-  /// Toggles the cadence chart visibility (no functionality for now).
+  /// Toggles the cadence chart visibility and sends command to bicycle computer.
   void toggleCadenceChart() {
-    state = state.copyWith(showCadenceChart: !state.showCadenceChart);
+    final newValue = !state.showCadenceChart;
+    state = state.copyWith(showCadenceChart: newValue);
+    SharedPreferences.getInstance().then((prefs) {
+      prefs.setBool('showCadenceChart', newValue);
+    });
+    _sendVisibilityCommand('cadence', newValue);
   }
 
-  /// Toggles the power chart visibility (no functionality for now).
+  /// Toggles the power chart visibility and sends command to bicycle computer.
   void togglePowerChart() {
-    state = state.copyWith(showPowerChart: !state.showPowerChart);
+    final newValue = !state.showPowerChart;
+    state = state.copyWith(showPowerChart: newValue);
+    SharedPreferences.getInstance().then((prefs) {
+      prefs.setBool('showPowerChart', newValue);
+    });
+    _sendVisibilityCommand('power', newValue);
   }
 
-  /// Toggles the altitude chart visibility (no functionality for now).
+  /// Toggles the altitude chart visibility and sends command to bicycle computer.
   void toggleAltitudeChart() {
-    state = state.copyWith(showAltitudeChart: !state.showAltitudeChart);
+    final newValue = !state.showAltitudeChart;
+    state = state.copyWith(showAltitudeChart: newValue);
+    SharedPreferences.getInstance().then((prefs) {
+      prefs.setBool('showAltitudeChart', newValue);
+    });
+    _sendVisibilityCommand('altitude', newValue);
   }
 
-  /// Toggles the distance traveled visibility (no functionality for now).
+  /// Toggles the distance traveled visibility and sends command to bicycle computer.
   void toggleDistanceTraveled() {
-    state = state.copyWith(showDistanceTraveled: !state.showDistanceTraveled);
+    final newValue = !state.showDistanceTraveled;
+    state = state.copyWith(showDistanceTraveled: newValue);
+    SharedPreferences.getInstance().then((prefs) {
+      prefs.setBool('showDistanceTraveled', newValue);
+    });
+    _sendVisibilityCommand('distance', newValue);
   }
 
-  /// Toggles the calories visibility (no functionality for now).
+  /// Toggles the calories visibility and sends command to bicycle computer.
   void toggleCalories() {
-    state = state.copyWith(showCalories: !state.showCalories);
+    final newValue = !state.showCalories;
+    state = state.copyWith(showCalories: newValue);
+    SharedPreferences.getInstance().then((prefs) {
+      prefs.setBool('showCalories', newValue);
+    });
+    _sendVisibilityCommand('calories', newValue);
   }
 
-  /// Toggles the map visibility (no functionality for now).
+  /// Toggles the map visibility.
   void toggleMap() {
-    state = state.copyWith(showMap: !state.showMap);
+    final newValue = !state.showMap;
+    state = state.copyWith(showMap: newValue);
+    SharedPreferences.getInstance().then((prefs) {
+      prefs.setBool('showMap', newValue);
+    });
+    _sendVisibilityCommand('map', newValue);
+  }
+
+  /// Sends a visibility command to the bicycle computer via BLE.
+  void _sendVisibilityCommand(String statistic, bool visible) {
+    try {
+      final command = '{"type": "visibility", "statistic": "$statistic", "visible": $visible}';
+      _databaseChannel.invokeMethod('sendData', {'data': command.codeUnits});
+    } catch (e) {
+      // Silently fail if BLE is not connected or command fails
+    }
   }
 
   /// Deletes the user account.

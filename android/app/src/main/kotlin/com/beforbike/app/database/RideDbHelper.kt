@@ -246,6 +246,7 @@ class RideDbHelper(context: Context) :
 
     /**
      * Retorna os dados de resumo de uma corrida (Tabela 1).
+     * Se os totais não estiverem calculados (distância ou calorias zero), calcula e atualiza.
      */
     fun getRideSummary(rideId: Long): Map<String, Any?>? {
         val db = this.readableDatabase
@@ -271,6 +272,25 @@ class RideDbHelper(context: Context) :
                     }
                     // --- FIM DA CORREÇÃO ---
                 }
+
+                // Verifica se os totais estão calculados
+                val totalDistance = map[RidesEntry.COLUMN_TOTAL_DISTANCE_KM] as? Double ?: 0.0
+                val totalCalories = map[RidesEntry.COLUMN_CALORIES] as? Double ?: 0.0
+                if (totalDistance == 0.0 && totalCalories == 0.0) {
+                    // Calcula estatísticas se não estiverem presentes
+                    val stats = calculateRideStatistics(rideId)
+                    if (stats != null) {
+                        updateRideSummary(rideId, stats)
+                        // Atualiza o map com os novos valores
+                        map[RidesEntry.COLUMN_TOTAL_DISTANCE_KM] = stats["total_distance_km"]
+                        map[RidesEntry.COLUMN_AVG_VELOCITY_KMH] = stats["avg_velocity_kmh"]
+                        map[RidesEntry.COLUMN_AVG_POWER] = stats["avg_power"]
+                        map[RidesEntry.COLUMN_AVG_CADENCE] = stats["avg_cadence"]
+                        map[RidesEntry.COLUMN_CALORIES] = stats["calories"]
+                        map[RidesEntry.COLUMN_END_TIME] = stats["end_time"]
+                    }
+                }
+
                 return map
             }
         }
@@ -294,7 +314,9 @@ class RideDbHelper(context: Context) :
                 TelemetryEntry.COLUMN_GPS_SPEED, //
                 TelemetryEntry.COLUMN_CRANK_SPEED, //
                 TelemetryEntry.COLUMN_POWER,
-                TelemetryEntry.COLUMN_CADENCE
+                TelemetryEntry.COLUMN_CADENCE,
+                TelemetryEntry.COLUMN_CRANK_CALORIES, // Adicionado para somar calorias
+                TelemetryEntry.COLUMN_CRANK_DISTANCE // Adicionado para verificar distância cumulativa
             ),
             "${TelemetryEntry.COLUMN_RIDE_ID} = ?",
             arrayOf(rideId.toString()),
@@ -312,6 +334,7 @@ class RideDbHelper(context: Context) :
         val velocities = mutableListOf<Double>()
         val powers = mutableListOf<Double>()
         val cadences = mutableListOf<Double>()
+        var totalCalories = 0.0
 
         var startTime: Long? = null
         var endTime: Long? = null
@@ -394,6 +417,12 @@ class RideDbHelper(context: Context) :
                     cadences.add(it.getDouble(cadIdx))
                 }
 
+                // --- Calorias cumulativas ---
+                val calIdx = it.getColumnIndexOrThrow(TelemetryEntry.COLUMN_CRANK_CALORIES)
+                if (!it.isNull(calIdx)) {
+                    totalCalories = it.getDouble(calIdx) // Último valor é o total
+                }
+
             } while (it.moveToNext())
         }
 
@@ -404,7 +433,9 @@ class RideDbHelper(context: Context) :
         val avgVelocityKmh = if (velocities.isNotEmpty()) velocities.average() else 0.0
         val avgPower = if (powers.isNotEmpty()) powers.average() else 0.0
         val avgCadence = if (cadences.isNotEmpty()) cadences.average() else 0.0
-        val calories = avgPower * durationHours * 3.6 // Fórmula de aproximação
+
+        // If calories not received via BLE (cumulative == 0), calculate from power
+        val calculatedCalories = if (totalCalories == 0.0) avgPower * durationHours * 3.6 else totalCalories
 
         val result = mapOf(
             "ride_id" to rideId,
@@ -414,7 +445,7 @@ class RideDbHelper(context: Context) :
             "avg_velocity_kmh" to avgVelocityKmh,
             "avg_power" to avgPower,
             "avg_cadence" to avgCadence,
-            "calories" to calories
+            "calories" to calculatedCalories
         )
 
         Log.d(TAG, "Estatísticas calculadas para $rideId: $result")
@@ -487,5 +518,11 @@ class RideDbHelper(context: Context) :
             }
         }
         return results
+    }
+
+    fun deleteRide(rideId: Long) {
+        val db = writableDatabase
+        db.delete(RidesEntry.TABLE_NAME, "${RidesEntry.COLUMN_RIDE_ID} = ?", arrayOf(rideId.toString()))
+        // TelemetryData will be deleted automatically due to ON DELETE CASCADE
     }
 }
