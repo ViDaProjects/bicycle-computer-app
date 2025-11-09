@@ -8,307 +8,232 @@ import android.provider.BaseColumns
 import android.util.Log
 import java.text.SimpleDateFormat
 import java.util.*
+import android.database.Cursor
 
 class RideDbHelper(context: Context) :
     SQLiteOpenHelper(context, DATABASE_NAME, null, DATABASE_VERSION) {
 
-    // --- Schema Definition (based on cria_banco.sql) ---
+    // --- Schema Definition (2 Tables: Summary + Full Telemetry) ---
     companion object {
-        const val DATABASE_VERSION = 7 // Increment if schema changes
+        // INCREMENTADO para 10 para forçar a atualização do schema
+        const val DATABASE_VERSION = 10 //
         const val DATABASE_NAME = "BikeRides.db"
         private const val TAG = "RideDbHelper"
 
-        // Constants for easy access from other files
-        const val TABLE_RIDES = "Rides"
-        const val TABLE_POWER = "Power"
-        const val TABLE_MAPDATA = "Localization"
-        const val TABLE_VELOCITY = "Velocity"
-        const val TABLE_CADENCE = "Cadence"
-
-        const val COLUMN_RIDE_ID = "ride_id"
-        const val COLUMN_POWER = "power"
-        const val COLUMN_TIMESTAMP = "timestamp"
-        const val COLUMN_LATITUDE = "latitude"
-        const val COLUMN_LONGITUDE = "longitude"
-        const val COLUMN_ALTITUDE = "altitude"
-        const val COLUMN_VELOCITY = "velocity"
-        const val COLUMN_CADENCE = "cadence"
-
+        // --- Tabela 1: Rides (Geral/Resumo) ---
         object RidesEntry : BaseColumns {
             const val TABLE_NAME = "Rides"
-            const val COLUMN_NAME_RIDE_ID = "ride_id" // Unique ride ID
+            const val COLUMN_RIDE_ID = "ride_id" // ID único (ex: 123)
+            const val COLUMN_START_TIME = "start_time"
+            const val COLUMN_END_TIME = "end_time"
+            const val COLUMN_TOTAL_DISTANCE_KM = "total_distance_km"
+            const val COLUMN_AVG_VELOCITY_KMH = "avg_velocity_kmh"
+            const val COLUMN_AVG_POWER = "avg_power"
+            const val COLUMN_AVG_CADENCE = "avg_cadence"
+            const val COLUMN_CALORIES = "calories"
         }
 
-        object PowerEntry : BaseColumns {
-            const val TABLE_NAME = "Power"
-            const val COLUMN_NAME_RIDE_ID = "ride_id" // Foreign key to rides._ID
-            const val COLUMN_NAME_POWER = "power"
-            const val COLUMN_NAME_TIMESTAMP = "timestamp"
-        }
+        // --- Tabela 2: TelemetryData (Dados Brutos COMPLETOS) ---
+        object TelemetryEntry : BaseColumns {
+            const val TABLE_NAME = "TelemetryData"
+            const val COLUMN_TELEMETRY_ID = "_id" // Chave primária interna
+            const val COLUMN_RIDE_ID = "ride_id" // Chave estrangeira para Rides
 
-        object MapDataEntry : BaseColumns {
-            const val TABLE_NAME = "Localization"
-            const val COLUMN_NAME_RIDE_ID = "ride_id" // Foreign key to rides._ID
-            const val COLUMN_NAME_LATITUDE = "latitude"
-            const val COLUMN_NAME_LONGITUDE = "longitude"
-            const val COLUMN_NAME_ALTITUDE = "altitude"
-            const val COLUMN_NAME_TIMESTAMP = "timestamp"
-        }
+            // Campos do PacketInfo (info)
+            const val COLUMN_PACKET_DATE = "packet_date"
+            const val COLUMN_PACKET_TIME = "packet_time"
 
-        object VelocityEntry : BaseColumns {
-            const val TABLE_NAME = "Velocity"
-            const val COLUMN_NAME_RIDE_ID = "ride_id" // Foreign key to rides._ID
-            const val COLUMN_NAME_VELOCITY = "velocity"
-            const val COLUMN_NAME_TIMESTAMP = "timestamp"
-        }
+            // Campos do GpsData (gps)
+            const val COLUMN_GPS_TIMESTAMP = "gps_timestamp" //
+            const val COLUMN_LATITUDE = "latitude" //
+            const val COLUMN_LONGITUDE = "longitude" //
+            const val COLUMN_ALTITUDE = "altitude" //
+            const val COLUMN_GPS_SPEED = "gps_speed" //
+            const val COLUMN_DIRECTION = "direction" //
+            const val COLUMN_FIX_SATELLITES = "fix_satellites" //
+            const val COLUMN_FIX_QUALITY = "fix_quality" //
 
-        object CadenceEntry : BaseColumns {
-            const val TABLE_NAME = "Cadence"
-            const val COLUMN_NAME_RIDE_ID = "ride_id" // Foreign key to rides._ID
-            const val COLUMN_NAME_CADENCE = "cadence"
-            const val COLUMN_NAME_TIMESTAMP = "timestamp"
+            // Campos do CrankData (crank)
+            const val COLUMN_POWER = "power" //
+            const val COLUMN_CADENCE = "cadence" //
+            const val COLUMN_JOULES = "joules" //
+            const val COLUMN_CRANK_CALORIES = "crank_calories" //
+            const val COLUMN_CRANK_SPEED_MS = "crank_speed_ms" //
+            const val COLUMN_CRANK_SPEED = "crank_speed" //
+            const val COLUMN_CRANK_DISTANCE = "crank_distance" //
         }
 
         // --- SQL Creation Commands ---
         private const val SQL_CREATE_RIDES =
             "CREATE TABLE ${RidesEntry.TABLE_NAME} (" +
-                    "${BaseColumns._ID} INTEGER PRIMARY KEY," + // Android internal ID
-                    "${RidesEntry.COLUMN_NAME_RIDE_ID} INTEGER UNIQUE NOT NULL)" // Unique ride ID
+                    "${RidesEntry.COLUMN_RIDE_ID} INTEGER PRIMARY KEY," +
+                    "${RidesEntry.COLUMN_START_TIME} TEXT NOT NULL," +
+                    "${RidesEntry.COLUMN_END_TIME} TEXT," +
+                    "${RidesEntry.COLUMN_TOTAL_DISTANCE_KM} REAL," +
+                    "${RidesEntry.COLUMN_AVG_VELOCITY_KMH} REAL," +
+                    "${RidesEntry.COLUMN_AVG_POWER} REAL," +
+                    "${RidesEntry.COLUMN_AVG_CADENCE} REAL," +
+                    "${RidesEntry.COLUMN_CALORIES} REAL)"
 
-        private const val SQL_CREATE_POWER =
-            "CREATE TABLE ${PowerEntry.TABLE_NAME} (" +
-                    "${BaseColumns._ID} INTEGER PRIMARY KEY AUTOINCREMENT," +
-                    "${PowerEntry.COLUMN_NAME_RIDE_ID} INTEGER NOT NULL," +
-                    "${PowerEntry.COLUMN_NAME_POWER} REAL," + // Use REAL
-                    "${PowerEntry.COLUMN_NAME_TIMESTAMP} TEXT NOT NULL," +
-                    "FOREIGN KEY (${PowerEntry.COLUMN_NAME_RIDE_ID}) REFERENCES ${RidesEntry.TABLE_NAME}(${BaseColumns._ID}) ON DELETE CASCADE)"
-
-        private const val SQL_CREATE_MAPDATA =
-            "CREATE TABLE ${MapDataEntry.TABLE_NAME} (" +
-                    "${BaseColumns._ID} INTEGER PRIMARY KEY AUTOINCREMENT," +
-                    "${MapDataEntry.COLUMN_NAME_RIDE_ID} INTEGER NOT NULL," +
-                    "${MapDataEntry.COLUMN_NAME_LATITUDE} REAL NOT NULL," +
-                    "${MapDataEntry.COLUMN_NAME_LONGITUDE} REAL NOT NULL," +
-                    "${MapDataEntry.COLUMN_NAME_ALTITUDE} REAL," +
-                    "${MapDataEntry.COLUMN_NAME_TIMESTAMP} TEXT NOT NULL," +
-                    "FOREIGN KEY (${MapDataEntry.COLUMN_NAME_RIDE_ID}) REFERENCES ${RidesEntry.TABLE_NAME}(${BaseColumns._ID}) ON DELETE CASCADE)"
-
-        private const val SQL_CREATE_VELOCITY =
-            "CREATE TABLE ${VelocityEntry.TABLE_NAME} (" +
-                    "${BaseColumns._ID} INTEGER PRIMARY KEY AUTOINCREMENT," +
-                    "${VelocityEntry.COLUMN_NAME_RIDE_ID} INTEGER NOT NULL," +
-                    "${VelocityEntry.COLUMN_NAME_VELOCITY} REAL NOT NULL," +
-                    "${VelocityEntry.COLUMN_NAME_TIMESTAMP} TEXT NOT NULL," +
-                    "FOREIGN KEY (${VelocityEntry.COLUMN_NAME_RIDE_ID}) REFERENCES ${RidesEntry.TABLE_NAME}(${BaseColumns._ID}) ON DELETE CASCADE)"
-
-        private const val SQL_CREATE_CADENCE =
-            "CREATE TABLE ${CadenceEntry.TABLE_NAME} (" +
-                    "${BaseColumns._ID} INTEGER PRIMARY KEY AUTOINCREMENT," +
-                    "${CadenceEntry.COLUMN_NAME_RIDE_ID} INTEGER NOT NULL," +
-                    "${CadenceEntry.COLUMN_NAME_CADENCE} REAL NOT NULL," +
-                    "${CadenceEntry.COLUMN_NAME_TIMESTAMP} TEXT NOT NULL," +
-                    "FOREIGN KEY (${CadenceEntry.COLUMN_NAME_RIDE_ID}) REFERENCES ${RidesEntry.TABLE_NAME}(${BaseColumns._ID}) ON DELETE CASCADE)"
+        private const val SQL_CREATE_TELEMETRY_DATA =
+            "CREATE TABLE ${TelemetryEntry.TABLE_NAME} (" +
+                    "${TelemetryEntry.COLUMN_TELEMETRY_ID} INTEGER PRIMARY KEY AUTOINCREMENT," +
+                    "${TelemetryEntry.COLUMN_RIDE_ID} INTEGER NOT NULL," +
+                    // Campos do Info
+                    "${TelemetryEntry.COLUMN_PACKET_DATE} TEXT," +
+                    "${TelemetryEntry.COLUMN_PACKET_TIME} TEXT," +
+                    // Campos do GpsData
+                    "${TelemetryEntry.COLUMN_GPS_TIMESTAMP} TEXT," +
+                    "${TelemetryEntry.COLUMN_LATITUDE} REAL," +
+                    "${TelemetryEntry.COLUMN_LONGITUDE} REAL," +
+                    "${TelemetryEntry.COLUMN_ALTITUDE} REAL," +
+                    "${TelemetryEntry.COLUMN_GPS_SPEED} REAL," +
+                    "${TelemetryEntry.COLUMN_DIRECTION} REAL," +
+                    "${TelemetryEntry.COLUMN_FIX_SATELLITES} INTEGER," +
+                    "${TelemetryEntry.COLUMN_FIX_QUALITY} INTEGER," +
+                    // Campos do CrankData
+                    "${TelemetryEntry.COLUMN_POWER} REAL," +
+                    "${TelemetryEntry.COLUMN_CADENCE} REAL," +
+                    "${TelemetryEntry.COLUMN_JOULES} REAL," +
+                    "${TelemetryEntry.COLUMN_CRANK_CALORIES} REAL," +
+                    "${TelemetryEntry.COLUMN_CRANK_SPEED_MS} REAL," +
+                    "${TelemetryEntry.COLUMN_CRANK_SPEED} REAL," +
+                    "${TelemetryEntry.COLUMN_CRANK_DISTANCE} REAL," +
+                    "FOREIGN KEY (${TelemetryEntry.COLUMN_RIDE_ID}) REFERENCES ${RidesEntry.TABLE_NAME}(${RidesEntry.COLUMN_RIDE_ID}) ON DELETE CASCADE)"
 
         // --- SQL Deletion Commands ---
         private const val SQL_DELETE_RIDES = "DROP TABLE IF EXISTS ${RidesEntry.TABLE_NAME}"
-        private const val SQL_DELETE_POWER = "DROP TABLE IF EXISTS ${PowerEntry.TABLE_NAME}"
-        private const val SQL_DELETE_MAPDATA = "DROP TABLE IF EXISTS ${MapDataEntry.TABLE_NAME}"
-        private const val SQL_DELETE_VELOCITY = "DROP TABLE IF EXISTS ${VelocityEntry.TABLE_NAME}"
-        private const val SQL_DELETE_CADENCE = "DROP TABLE IF EXISTS ${CadenceEntry.TABLE_NAME}"
+        private const val SQL_DELETE_TELEMETRY_DATA = "DROP TABLE IF EXISTS ${TelemetryEntry.TABLE_NAME}"
+        // Nomes antigos
+        private const val SQL_DELETE_OLD_POWER = "DROP TABLE IF EXISTS Power"
+        private const val SQL_DELETE_OLD_MAPDATA = "DROP TABLE IF EXISTS Localization"
+        private const val SQL_DELETE_OLD_VELOCITY = "DROP TABLE IF EXISTS Velocity"
+        private const val SQL_DELETE_OLD_CADENCE = "DROP TABLE IF EXISTS Cadence"
     }
 
     override fun onConfigure(db: SQLiteDatabase) {
         super.onConfigure(db)
-        db.setForeignKeyConstraintsEnabled(true) // Enable foreign keys
+        db.setForeignKeyConstraintsEnabled(true)
     }
 
     override fun onCreate(db: SQLiteDatabase) {
-        // Create tables ONLY on first DB access
-        Log.i(TAG, "Criando tabelas do banco de dados (onCreate)...")
+        Log.i(TAG, "Criando tabelas do banco de dados (v10)...")
         db.execSQL(SQL_CREATE_RIDES)
-        db.execSQL(SQL_CREATE_POWER)
-        db.execSQL(SQL_CREATE_MAPDATA)
-        db.execSQL(SQL_CREATE_VELOCITY)
-        db.execSQL(SQL_CREATE_CADENCE)
+        db.execSQL(SQL_CREATE_TELEMETRY_DATA)
         Log.i(TAG, "Tabelas criadas com sucesso.")
     }
 
     override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
         Log.w(TAG, "Atualizando banco de dados da v$oldVersion para v$newVersion. Dados antigos serão perdidos.")
-        // Simple policy: drop everything and recreate. For production, use ALTER TABLE.
-        db.execSQL(SQL_DELETE_CADENCE)
-        db.execSQL(SQL_DELETE_POWER)
-        db.execSQL(SQL_DELETE_MAPDATA)
-        db.execSQL(SQL_DELETE_VELOCITY)
-        db.execSQL(SQL_DELETE_RIDES) // Drop rides last due to FKs
+        // Apaga TODAS as tabelas (novas e antigas)
+        db.execSQL(SQL_DELETE_TELEMETRY_DATA) // Apaga TelemetryData (v9) ou TelemetryData (v10)
+        db.execSQL(SQL_DELETE_OLD_POWER) //
+        db.execSQL(SQL_DELETE_OLD_MAPDATA) //
+        db.execSQL(SQL_DELETE_OLD_VELOCITY) //
+        db.execSQL(SQL_DELETE_OLD_CADENCE) //
+        db.execSQL(SQL_DELETE_RIDES) // Apaga Rides por último
         onCreate(db)
     }
 
     override fun onDowngrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
         Log.w(TAG, "Fazendo downgrade do banco de dados da v$oldVersion para v$newVersion. Dados antigos serão perdidos.")
-        onUpgrade(db, oldVersion, newVersion) // Use same destructive logic
+        onUpgrade(db, oldVersion, newVersion)
     }
 
-    // --- Helper Functions ---
-
     private fun getCurrentTimestamp(): String {
-        // Format consistent with original SQL
         return SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS", Locale.getDefault()).format(Date())
     }
 
     // --- INSERT Functions ---
 
     /**
-     * Verifica se uma corrida com o ID fornecido existe. Se não, cria uma nova.
-     * Retorna true se a corrida existe ou foi criada com sucesso, false caso contrário.
-     * ESSENCIAL para garantir a integridade da chave estrangeira.
+     * Garante que a "Corrida Geral" (Tabela 1) exista.
      */
-    fun ensureRideExists(rideIdFromDevice: Long, defaultNameBase: String = "Corrida Recebida"): Boolean {
+    fun ensureRideExists(rideIdFromDevice: Long, startTime: String?): Boolean {
         if (rideIdFromDevice <= 0) {
             Log.e(TAG, "ensureRideExists: ID da corrida inválido ($rideIdFromDevice).")
             return false
         }
-        val db = this.readableDatabase // Usa readable para checar
-        var exists = false
-
-        // Verifica se o ID já existe
-        val cursor = db.query(
-            RidesEntry.TABLE_NAME,
-            arrayOf(RidesEntry.COLUMN_NAME_RIDE_ID), // Coluna que queremos verificar
-            "${RidesEntry.COLUMN_NAME_RIDE_ID} = ?", // Clausula WHERE
-            arrayOf(rideIdFromDevice.toString()), // Argumento
-            null, null, null, "1" // Limit 1
-        )
-        cursor.use { // Garante que o cursor seja fechado
-            if (it.moveToFirst()) {
-                exists = true
-            }
-        }
-
-        if (exists) {
-            // Log.d(TAG, "ensureRideExists: Ride ID $rideIdFromDevice já existe.")
-            return true // Corrida já existe
-        } else {
-            // Corrida não existe, TENTA criar
-            Log.i(TAG, "ensureRideExists: Ride ID $rideIdFromDevice não encontrado. Tentando criar...")
-            val writableDb = this.writableDatabase
-            // Nome não é mais necessário - apenas o ID identifica a corrida
-
-            val values = ContentValues().apply {
-                put(BaseColumns._ID, rideIdFromDevice) // ID interno do Android
-                put(RidesEntry.COLUMN_NAME_RIDE_ID, rideIdFromDevice) // ID único da corrida
-                        // Summary constants removed - values calculated dynamically
-            }
-            try {
-                // Usa insert com CONFLICT_IGNORE. Se já existir (criado por outra thread), não faz nada.
-                val result = writableDb.insertWithOnConflict(RidesEntry.TABLE_NAME, null, values, SQLiteDatabase.CONFLICT_IGNORE)
-                if (result != -1L) {
-                    Log.i(TAG, "Nova entrada na tabela 'rides' criada para ID: $rideIdFromDevice")
-                    return true // Criado com sucesso
-                } else {
-                    // Se deu conflito IGNORE, significa que já existe.
-                    Log.w(TAG, "ensureRideExists: Conflito IGNORE ao inserir ID $rideIdFromDevice. Assumindo que já existe.")
-                    return true
-                }
-            } catch (e: Exception) {
-                Log.e(TAG, "Erro CRÍTICO ao tentar criar entrada na tabela 'rides' para ID $rideIdFromDevice: ${e.message}")
-                return false // Falha ao criar
-            }
-        }
-    }
-
-
-    /** Insere uma nova leitura de potência. Retorna true se sucesso. */
-    fun insertPower(rideId: Long, power: Float, timestamp: Long? = null): Boolean {
-        if (rideId <= 0) return false
         val db = this.writableDatabase
-        val timestampStr = timestamp?.let { SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS", Locale.getDefault()).format(Date(it)) } ?: getCurrentTimestamp()
-        val values = ContentValues().apply {
-            put(PowerEntry.COLUMN_NAME_RIDE_ID, rideId)
-            put(PowerEntry.COLUMN_NAME_POWER, power)
-            put(PowerEntry.COLUMN_NAME_TIMESTAMP, timestampStr)
-        }
-        val result = db.insert(PowerEntry.TABLE_NAME, null, values)
-        if (result == -1L) Log.w(TAG, "Falha ao inserir Power para ride $rideId")
-        return result != -1L
-    }
 
-    /** Insere uma nova leitura de velocidade. Retorna true se sucesso. */
-    fun insertVelocity(rideId: Long, velocity: Float): Boolean {
-        if (rideId <= 0) return false
-        val db = this.writableDatabase
         val values = ContentValues().apply {
-            put(VelocityEntry.COLUMN_NAME_RIDE_ID, rideId)
-            put(VelocityEntry.COLUMN_NAME_VELOCITY, velocity)
-            put(VelocityEntry.COLUMN_NAME_TIMESTAMP, getCurrentTimestamp())
+            put(RidesEntry.COLUMN_RIDE_ID, rideIdFromDevice)
+            put(RidesEntry.COLUMN_START_TIME, startTime ?: getCurrentTimestamp())
         }
-        val result = db.insert(VelocityEntry.TABLE_NAME, null, values)
-        if (result == -1L) Log.w(TAG, "Falha ao inserir Velocity para ride $rideId (FK existe?)")
-        return result != -1L
-    }
 
-    /** Insere uma nova leitura de mapa. Retorna true se sucesso. */
-    fun insertMapData(rideId: Long, lat: Float, lon: Float, alt: Float?, timestamp: Long? = null): Boolean {
-        if (rideId <= 0) return false
-        val db = this.writableDatabase
-        val timestampStr = timestamp?.let { SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS", Locale.getDefault()).format(Date(it)) } ?: getCurrentTimestamp()
-        val values = ContentValues().apply {
-            put(MapDataEntry.COLUMN_NAME_RIDE_ID, rideId)
-            put(MapDataEntry.COLUMN_NAME_LATITUDE, lat)
-            put(MapDataEntry.COLUMN_NAME_LONGITUDE, lon)
-            if (alt != null && alt.isFinite()) {
-                put(MapDataEntry.COLUMN_NAME_ALTITUDE, alt)
+        try {
+            val result = db.insertWithOnConflict(RidesEntry.TABLE_NAME, null, values, SQLiteDatabase.CONFLICT_IGNORE)
+            if (result == -1L) {
+                // Log.d(TAG, "ensureRideExists: Ride ID $rideIdFromDevice já existe.")
             } else {
-                putNull(MapDataEntry.COLUMN_NAME_ALTITUDE)
+                Log.i(TAG, "Nova entrada na tabela 'Rides' criada para ID: $rideIdFromDevice")
             }
-            put(MapDataEntry.COLUMN_NAME_TIMESTAMP, timestampStr)
+            return true
+        } catch (e: Exception) {
+            Log.e(TAG, "Erro CRÍTICO ao tentar criar entrada na tabela 'Rides' para ID $rideIdFromDevice: ${e.message}")
+            return false
         }
-        val result = db.insert(MapDataEntry.TABLE_NAME, null, values)
-        if (result == -1L) Log.w(TAG, "Falha ao inserir MapData para ride $rideId")
-        return result != -1L
     }
 
-    /** Insere uma nova leitura de velocidade. Retorna true se sucesso. */
-    fun insertVelocity(rideId: Long, velocity: Float, timestamp: Long? = null): Boolean {
-        if (rideId <= 0) return false
-        val db = this.writableDatabase
-        val timestampStr = timestamp?.let { SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS", Locale.getDefault()).format(Date(it)) } ?: getCurrentTimestamp()
-        val values = ContentValues().apply {
-            put(VelocityEntry.COLUMN_NAME_RIDE_ID, rideId)
-            put(VelocityEntry.COLUMN_NAME_VELOCITY, velocity)
-            put(VelocityEntry.COLUMN_NAME_TIMESTAMP, timestampStr)
-        }
-        val result = db.insert(VelocityEntry.TABLE_NAME, null, values)
-        if (result == -1L) Log.w(TAG, "Falha ao inserir Velocity para ride $rideId")
-        return result != -1L
-    }
-
-    /** Insere uma nova leitura de cadência. Retorna true se sucesso. */
-    fun insertCadence(rideId: Long, cadence: Float, timestamp: Long? = null): Boolean {
-        if (rideId <= 0) return false
-        val db = this.writableDatabase
-        val timestampStr = timestamp?.let { SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS", Locale.getDefault()).format(Date(it)) } ?: getCurrentTimestamp()
-        val values = ContentValues().apply {
-            put(CadenceEntry.COLUMN_NAME_RIDE_ID, rideId)
-            put(CadenceEntry.COLUMN_NAME_CADENCE, cadence)
-            put(CadenceEntry.COLUMN_NAME_TIMESTAMP, timestampStr)
-        }
-        val result = db.insert(CadenceEntry.TABLE_NAME, null, values)
-        if (result == -1L) Log.w(TAG, "Falha ao inserir Cadence para ride $rideId")
-        return result != -1L
-    }
-
-    // --- Funções de CONSULTA ---
 
     /**
-     * Retorna uma lista de IDs de corridas existentes.
+     * Insere um ponto de telemetria completo (Tabela 2).
+     */
+    fun insertTelemetryData(
+        rideId: Long,
+        infoMap: Map<String, Any?>,
+        gpsMap: Map<String, Any?>,
+        crankMap: Map<String, Any?>? // Pode ser nulo
+    ): Boolean {
+        if (rideId <= 0) return false
+        val db = this.writableDatabase
+
+        val values = ContentValues().apply {
+            put(TelemetryEntry.COLUMN_RIDE_ID, rideId)
+
+            // Dados do Info
+            put(TelemetryEntry.COLUMN_PACKET_DATE, infoMap["date"] as? String)
+            put(TelemetryEntry.COLUMN_PACKET_TIME, infoMap["time"] as? String)
+
+            // Dados do GpsData (gps)
+            put(TelemetryEntry.COLUMN_GPS_TIMESTAMP, gpsMap["timestamp"] as? String) //
+            put(TelemetryEntry.COLUMN_LATITUDE, gpsMap["latitude"] as? Double) //
+            put(TelemetryEntry.COLUMN_LONGITUDE, gpsMap["longitude"] as? Double) //
+            put(TelemetryEntry.COLUMN_ALTITUDE, gpsMap["altitude"] as? Double) //
+            put(TelemetryEntry.COLUMN_GPS_SPEED, gpsMap["speed"] as? Double) //
+            put(TelemetryEntry.COLUMN_DIRECTION, gpsMap["direction"] as? Double) //
+            put(TelemetryEntry.COLUMN_FIX_SATELLITES, gpsMap["fix_satellites"] as? Int) //
+            put(TelemetryEntry.COLUMN_FIX_QUALITY, gpsMap["fix_quality"] as? Int) //
+
+            // Dados do CrankData (crank) (apenas se crankMap não for nulo)
+            crankMap?.let {
+                put(TelemetryEntry.COLUMN_POWER, it["power"] as? Double) //
+                put(TelemetryEntry.COLUMN_CADENCE, it["cadence"] as? Double) //
+                put(TelemetryEntry.COLUMN_JOULES, it["joules"] as? Double) //
+                put(TelemetryEntry.COLUMN_CRANK_CALORIES, it["calories"] as? Double) //
+                put(TelemetryEntry.COLUMN_CRANK_SPEED_MS, it["speed_ms"] as? Double) //
+                put(TelemetryEntry.COLUMN_CRANK_SPEED, it["speed"] as? Double) //
+                put(TelemetryEntry.COLUMN_CRANK_DISTANCE, it["distance"] as? Double) //
+            }
+        }
+
+        val result = db.insert(TelemetryEntry.TABLE_NAME, null, values)
+        if (result == -1L) Log.w(TAG, "Falha ao inserir TelemetryData para ride $rideId")
+        return result != -1L
+    }
+
+    // --- Funções de CONSULTA E CÁLCULO ---
+
+    /**
+     * Retorna uma lista de IDs de corridas (Tabela 1).
      */
     fun getAllRideIds(): List<Long> {
         val db = this.readableDatabase
         val cursor = db.query(
             RidesEntry.TABLE_NAME,
-            arrayOf(RidesEntry.COLUMN_NAME_RIDE_ID),
-            null, null, null, null, null
+            arrayOf(RidesEntry.COLUMN_RIDE_ID),
+            null, null, null, null,
+            "${RidesEntry.COLUMN_START_TIME} DESC"
         )
         val rideIds = mutableListOf<Long>()
         cursor.use {
@@ -320,211 +245,247 @@ class RideDbHelper(context: Context) :
     }
 
     /**
-     * Retorna os dados básicos de uma corrida específica.
+     * Retorna os dados de resumo de uma corrida (Tabela 1).
      */
-    fun getRideData(rideId: Long): Map<String, Any?>? {
+    fun getRideSummary(rideId: Long): Map<String, Any?>? {
         val db = this.readableDatabase
         val cursor = db.query(
             RidesEntry.TABLE_NAME,
-            arrayOf(BaseColumns._ID, RidesEntry.COLUMN_NAME_RIDE_ID),
-            "${RidesEntry.COLUMN_NAME_RIDE_ID} = ?",
+            null, // Pega todas as colunas
+            "${RidesEntry.COLUMN_RIDE_ID} = ?",
             arrayOf(rideId.toString()),
             null, null, null
         )
         cursor.use {
             if (it.moveToFirst()) {
-                return mapOf(
-                    "id" to it.getLong(0),
-                    "ride_id" to it.getLong(1)
-                )
+                val map = mutableMapOf<String, Any?>()
+                for (i in 0 until it.columnCount) {
+                    // --- CORREÇÃO AQUI ---
+                    when (it.getType(i)) {
+                        Cursor.FIELD_TYPE_NULL -> map[it.getColumnName(i)] = null
+                        Cursor.FIELD_TYPE_INTEGER -> map[it.getColumnName(i)] = it.getLong(i)
+                        Cursor.FIELD_TYPE_FLOAT -> map[it.getColumnName(i)] = it.getDouble(i)
+                        Cursor.FIELD_TYPE_STRING -> map[it.getColumnName(i)] = it.getString(i)
+                        Cursor.FIELD_TYPE_BLOB -> map[it.getColumnName(i)] = it.getBlob(i)
+                        else -> map[it.getColumnName(i)] = null // Padrão
+                    }
+                    // --- FIM DA CORREÇÃO ---
+                }
+                return map
             }
         }
         return null
     }
 
     /**
-     * Calcula estatísticas de uma corrida baseada nos dados armazenados nas tabelas.
+     * Calcula as estatísticas de resumo (para Tabela 1)
+     * lendo todos os pontos da Tabela 2.
+     * * Esta é uma operação PESADA. Chame-a apenas no final da corrida.
      */
     fun calculateRideStatistics(rideId: Long): Map<String, Any?>? {
         val db = this.readableDatabase
-        var duration = 0.0
-        var distance = 0.0
-        var maxVelocity = 0.0
-        var meanVelocity = 0.0
-        var calories = 0.0
+
+        val cursor = db.query(
+            TelemetryEntry.TABLE_NAME,
+            arrayOf( // Apenas as colunas necessárias para o cálculo
+                TelemetryEntry.COLUMN_GPS_TIMESTAMP, //
+                TelemetryEntry.COLUMN_LATITUDE,
+                TelemetryEntry.COLUMN_LONGITUDE,
+                TelemetryEntry.COLUMN_GPS_SPEED, //
+                TelemetryEntry.COLUMN_CRANK_SPEED, //
+                TelemetryEntry.COLUMN_POWER,
+                TelemetryEntry.COLUMN_CADENCE
+            ),
+            "${TelemetryEntry.COLUMN_RIDE_ID} = ?",
+            arrayOf(rideId.toString()),
+            null, null,
+            "${TelemetryEntry.COLUMN_GPS_TIMESTAMP} ASC" // Ordena por tempo
+        )
+
+        if (!cursor.moveToFirst()) {
+            cursor.close()
+            Log.w(TAG, "calculateRideStatistics: Nenhum dado de telemetria encontrado para ride $rideId")
+            return null
+        }
+
+        var totalDistanceKm = 0.0
+        val velocities = mutableListOf<Double>()
+        val powers = mutableListOf<Double>()
+        val cadences = mutableListOf<Double>()
+
         var startTime: Long? = null
         var endTime: Long? = null
-
-        Log.d(TAG, "Calculating statistics for ride $rideId")
-
-        // Calcular velocidade máxima e média
-        val velocityCursor = db.query(
-            VelocityEntry.TABLE_NAME,
-            arrayOf(VelocityEntry.COLUMN_NAME_VELOCITY),
-            "${VelocityEntry.COLUMN_NAME_RIDE_ID} = ?",
-            arrayOf(rideId.toString()),
-            null, null, null
-        )
-        val velocities = mutableListOf<Double>()
-        velocityCursor.use {
-            while (it.moveToNext()) {
-                val vel = it.getDouble(0)
-                velocities.add(vel)
-                if (vel > maxVelocity) maxVelocity = vel
-            }
-        }
-        if (velocities.isNotEmpty()) {
-            meanVelocity = velocities.average()
-        }
-
-        // Calcular duração baseada no primeiro e último timestamp dos dados GPS
-        val mapDataCursor = db.query(
-            MapDataEntry.TABLE_NAME,
-            arrayOf(MapDataEntry.COLUMN_NAME_TIMESTAMP),
-            "${MapDataEntry.COLUMN_NAME_RIDE_ID} = ?",
-            arrayOf(rideId.toString()),
-            null, null, "${MapDataEntry.COLUMN_NAME_TIMESTAMP} ASC"
-        )
-        mapDataCursor.use {
-            if (it.moveToFirst()) {
-                try {
-                    val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS", Locale.getDefault())
-                    startTime = dateFormat.parse(it.getString(0))?.time
-                } catch (e: Exception) {
-                    Log.e(TAG, "Erro ao parsear startTime: ${e.message}")
-                }
-            }
-            if (it.moveToLast()) {
-                try {
-                    val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS", Locale.getDefault())
-                    endTime = dateFormat.parse(it.getString(0))?.time
-                } catch (e: Exception) {
-                    Log.e(TAG, "Erro ao parsear endTime: ${e.message}")
-                }
-            }
-        }
-
-        // Calcular duração baseada nos timestamps GPS
-        if (startTime != null && endTime != null) {
-            duration = (endTime!! - startTime!!) / 1000.0 // em segundos
-        }
-
-        // Calcular calorias totais baseado no tempo e potência média
-        // Fórmula simplificada: ~500 calorias por hora para ciclismo moderado
-        val powerCursor = db.query(
-            PowerEntry.TABLE_NAME,
-            arrayOf(PowerEntry.COLUMN_NAME_POWER, PowerEntry.COLUMN_NAME_TIMESTAMP),
-            "${PowerEntry.COLUMN_NAME_RIDE_ID} = ?",
-            arrayOf(rideId.toString()),
-            null, null, PowerEntry.COLUMN_NAME_TIMESTAMP + " ASC"
-        )
-        val powerReadings = mutableListOf<Pair<Double, String>>()
-        powerCursor.use {
-            while (it.moveToNext()) {
-                powerReadings.add(Pair(it.getDouble(0), it.getString(1)))
-            }
-        }
-        if (powerReadings.isNotEmpty()) {
-            val totalTimeHours = duration / 3600.0 // converter segundos para horas
-            val avgPower = powerReadings.map { it.first }.average()
-            // Estimativa: 1 watt médio ≈ 0.24 calorias por hora (860 cal/kWh ÷ 3600)
-            calories = avgPower * totalTimeHours * 0.24
-        } else {
-            // Fallback: estimativa baseada apenas no tempo (500 cal/hora)
-            val totalTimeHours = duration / 3600.0
-            calories = 500.0 * totalTimeHours
-        }
-
-        // Calcular distância aproximada baseada em pontos GPS
-        val locationCursor = db.query(
-            MapDataEntry.TABLE_NAME,
-            arrayOf(MapDataEntry.COLUMN_NAME_LATITUDE, MapDataEntry.COLUMN_NAME_LONGITUDE),
-            "${MapDataEntry.COLUMN_NAME_RIDE_ID} = ?",
-            arrayOf(rideId.toString()),
-            null, null, "${MapDataEntry.COLUMN_NAME_TIMESTAMP} ASC"
-        )
         var prevLat = 0.0
         var prevLon = 0.0
-        var firstPoint = true
-        locationCursor.use {
-            while (it.moveToNext()) {
-                val lat = it.getDouble(0)
-                val lon = it.getDouble(1)
-                if (firstPoint) {
-                    // Initialize with first point
-                    prevLat = lat
-                    prevLon = lon
-                    firstPoint = false
-                } else {
-                    // Cálculo aproximado de distância em km usando fórmula de Haversine
-                    val dLat = Math.toRadians(lat - prevLat)
-                    val dLon = Math.toRadians(lon - prevLon)
-                    val a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-                            Math.cos(Math.toRadians(prevLat)) * Math.cos(Math.toRadians(lat)) *
-                            Math.sin(dLon / 2) * Math.sin(dLon / 2)
-                    val c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
-                    val segmentDistance = 6371 * c // Raio da Terra em km
-                    distance += segmentDistance
-                    prevLat = lat
-                    prevLon = lon
+        var firstGpsPoint = true
+
+        // Tenta usar o formato com milissegundos
+        val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS", Locale.getDefault())
+
+        cursor.use {
+            do {
+                // --- Tempo e Duração ---
+                val timestampStr = it.getString(it.getColumnIndexOrThrow(TelemetryEntry.COLUMN_GPS_TIMESTAMP))
+                try {
+                    val timestamp = dateFormat.parse(timestampStr)?.time
+                    if (timestamp != null) {
+                        if (startTime == null) startTime = timestamp
+                        endTime = timestamp
+                    }
+                } catch (e: Exception) {
+                    // Tenta formato sem milissegundos se o primeiro falhar
+                    try {
+                        val ts = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).parse(timestampStr)?.time
+                        if (ts != null) {
+                            if (startTime == null) startTime = ts
+                            endTime = ts
+                        }
+                    } catch (e2: Exception) {
+                        Log.w(TAG, "Formato de timestamp inválido: $timestampStr")
+                    }
                 }
-            }
+
+                // --- GPS e Distância ---
+                val latIdx = it.getColumnIndexOrThrow(TelemetryEntry.COLUMN_LATITUDE)
+                val lonIdx = it.getColumnIndexOrThrow(TelemetryEntry.COLUMN_LONGITUDE)
+                if (!it.isNull(latIdx) && !it.isNull(lonIdx)) {
+                    val lat = it.getDouble(latIdx)
+                    val lon = it.getDouble(lonIdx)
+
+                    if (firstGpsPoint) {
+                        prevLat = lat
+                        prevLon = lon
+                        firstGpsPoint = false
+                    } else {
+                        // Cálculo de Haversine
+                        val dLat = Math.toRadians(lat - prevLat)
+                        val dLon = Math.toRadians(lon - prevLon)
+                        val a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                                Math.cos(Math.toRadians(prevLat)) * Math.cos(Math.toRadians(lat)) *
+                                Math.sin(dLon / 2) * Math.sin(dLon / 2)
+                        val c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+                        totalDistanceKm += (6371 * c) // Raio da Terra em km
+                        prevLat = lat
+                        prevLon = lon
+                    }
+                }
+
+                // --- Velocidade (Usa GPS_SPEED como primário) ---
+                val velIdx = it.getColumnIndexOrThrow(TelemetryEntry.COLUMN_GPS_SPEED)
+                val crankVelIdx = it.getColumnIndexOrThrow(TelemetryEntry.COLUMN_CRANK_SPEED)
+
+                if (!it.isNull(velIdx)) {
+                    val velMetersPerSec = it.getDouble(velIdx)
+                    velocities.add(velMetersPerSec * 3.6) // Converte m/s para km/h
+                } else if (!it.isNull(crankVelIdx)) {
+                    // Fallback para a velocidade do crank (assumindo km/h)
+                    velocities.add(it.getDouble(crankVelIdx))
+                }
+
+                // --- Potência ---
+                val powerIdx = it.getColumnIndexOrThrow(TelemetryEntry.COLUMN_POWER)
+                if (!it.isNull(powerIdx)) {
+                    powers.add(it.getDouble(powerIdx))
+                }
+
+                // --- Cadência ---
+                val cadIdx = it.getColumnIndexOrThrow(TelemetryEntry.COLUMN_CADENCE)
+                if (!it.isNull(cadIdx)) {
+                    cadences.add(it.getDouble(cadIdx))
+                }
+
+            } while (it.moveToNext())
         }
+
+        // --- Calcula Médias e Totais ---
+        val durationSec = if (startTime != null && endTime != null) (endTime!! - startTime!!) / 1000.0 else 0.0
+        val durationHours = durationSec / 3600.0
+
+        val avgVelocityKmh = if (velocities.isNotEmpty()) velocities.average() else 0.0
+        val avgPower = if (powers.isNotEmpty()) powers.average() else 0.0
+        val avgCadence = if (cadences.isNotEmpty()) cadences.average() else 0.0
+        val calories = avgPower * durationHours * 3.6 // Fórmula de aproximação
 
         val result = mapOf(
-            "duration" to duration,
-            "distance" to distance,
-            "maxVelocity" to maxVelocity,
-            "meanVelocity" to meanVelocity,
-            "calories" to calories,
-            "startTime" to startTime,
-            "endTime" to endTime
-        ).also {
-            Log.d(TAG, "Final stats for ride $rideId: duration=$duration, distance=$distance, calories=$calories")
-        }
+            "ride_id" to rideId,
+            "start_time" to (startTime?.let { dateFormat.format(Date(it)) } ?: getCurrentTimestamp()),
+            "end_time" to (endTime?.let { dateFormat.format(Date(it)) } ?: getCurrentTimestamp()),
+            "total_distance_km" to totalDistanceKm,
+            "avg_velocity_kmh" to avgVelocityKmh,
+            "avg_power" to avgPower,
+            "avg_cadence" to avgCadence,
+            "calories" to calories
+        )
 
+        Log.d(TAG, "Estatísticas calculadas para $rideId: $result")
         return result
     }
 
     /**
-     * Retorna todos os dados de velocidade de uma corrida.
+     * Atualiza a Tabela 1 (Rides) com os dados de resumo calculados.
      */
-    fun getRideVelocities(rideId: Long): List<Pair<String, Double>> {
-        val db = this.readableDatabase
-        val cursor = db.query(
-            VelocityEntry.TABLE_NAME,
-            arrayOf(VelocityEntry.COLUMN_NAME_TIMESTAMP, VelocityEntry.COLUMN_NAME_VELOCITY),
-            "${VelocityEntry.COLUMN_NAME_RIDE_ID} = ?",
-            arrayOf(rideId.toString()),
-            null, null, VelocityEntry.COLUMN_NAME_TIMESTAMP + " ASC"
-        )
-        val velocities = mutableListOf<Pair<String, Double>>()
-        cursor.use {
-            while (it.moveToNext()) {
-                velocities.add(Pair(it.getString(0), it.getDouble(1)))
-            }
+    fun updateRideSummary(rideId: Long, stats: Map<String, Any?>): Boolean {
+        val db = this.writableDatabase
+        val values = ContentValues().apply {
+            stats["end_time"]?.let { put(RidesEntry.COLUMN_END_TIME, it as String) }
+            stats["total_distance_km"]?.let { put(RidesEntry.COLUMN_TOTAL_DISTANCE_KM, it as Double) }
+            stats["avg_velocity_kmh"]?.let { put(RidesEntry.COLUMN_AVG_VELOCITY_KMH, it as Double) }
+            stats["avg_power"]?.let { put(RidesEntry.COLUMN_AVG_POWER, it as Double) }
+            stats["avg_cadence"]?.let { put(RidesEntry.COLUMN_AVG_CADENCE, it as Double) }
+            stats["calories"]?.let { put(RidesEntry.COLUMN_CALORIES, it as Double) }
         }
-        return velocities
+
+        if (values.size() == 0) {
+            Log.w(TAG, "updateRideSummary: Nenhum dado válido para atualizar no ride $rideId")
+            return false
+        }
+
+        val result = db.update(
+            RidesEntry.TABLE_NAME,
+            values,
+            "${RidesEntry.COLUMN_RIDE_ID} = ?",
+            arrayOf(rideId.toString())
+        )
+
+        Log.i(TAG, "Tabela 'Rides' (ID: $rideId) atualizada com estatísticas. Linhas afetadas: $result")
+        return result > 0
     }
 
     /**
-     * Retorna todos os dados de mapa de uma corrida.
+     * Retorna todos os dados de telemetria brutos de uma corrida (Tabela 2).
      */
-    fun getRideMapData(rideId: Long): List<Triple<String, Double, Double>> {
+    fun getRideTelemetryData(rideId: Long): List<Map<String, Any?>> {
         val db = this.readableDatabase
         val cursor = db.query(
-            MapDataEntry.TABLE_NAME,
-            arrayOf(MapDataEntry.COLUMN_NAME_TIMESTAMP, MapDataEntry.COLUMN_NAME_LATITUDE, MapDataEntry.COLUMN_NAME_LONGITUDE),
-            "${MapDataEntry.COLUMN_NAME_RIDE_ID} = ?",
+            TelemetryEntry.TABLE_NAME,
+            null, // Pega todas as colunas
+            "${TelemetryEntry.COLUMN_RIDE_ID} = ?",
             arrayOf(rideId.toString()),
-            null, null, MapDataEntry.COLUMN_NAME_TIMESTAMP + " ASC"
+            null, null,
+            "${TelemetryEntry.COLUMN_TELEMETRY_ID} ASC"
         )
-        val mapData = mutableListOf<Triple<String, Double, Double>>()
+
+        val results = mutableListOf<Map<String, Any?>>()
         cursor.use {
-            while (it.moveToNext()) {
-                mapData.add(Triple(it.getString(0), it.getDouble(1), it.getDouble(2)))
+            if (it.moveToFirst()) {
+                do {
+                    val map = mutableMapOf<String, Any?>()
+                    for (i in 0 until it.columnCount) {
+                        // --- CORREÇÃO AQUI ---
+                        when (it.getType(i)) {
+                            Cursor.FIELD_TYPE_NULL -> map[it.getColumnName(i)] = null
+                            Cursor.FIELD_TYPE_INTEGER -> map[it.getColumnName(i)] = it.getLong(i)
+                            Cursor.FIELD_TYPE_FLOAT -> map[it.getColumnName(i)] = it.getDouble(i)
+                            Cursor.FIELD_TYPE_STRING -> map[it.getColumnName(i)] = it.getString(i)
+                            Cursor.FIELD_TYPE_BLOB -> map[it.getColumnName(i)] = it.getBlob(i)
+                            else -> map[it.getColumnName(i)] = null // Padrão
+                        }
+                        // --- FIM DA CORREÇÃO ---
+                    }
+                    results.add(map)
+                } while (it.moveToNext())
             }
         }
-        return mapData
+        return results
     }
 }
