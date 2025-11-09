@@ -261,7 +261,6 @@ class RideDbHelper(context: Context) :
             if (it.moveToFirst()) {
                 val map = mutableMapOf<String, Any?>()
                 for (i in 0 until it.columnCount) {
-                    // --- CORREÇÃO AQUI ---
                     when (it.getType(i)) {
                         Cursor.FIELD_TYPE_NULL -> map[it.getColumnName(i)] = null
                         Cursor.FIELD_TYPE_INTEGER -> map[it.getColumnName(i)] = it.getLong(i)
@@ -270,7 +269,6 @@ class RideDbHelper(context: Context) :
                         Cursor.FIELD_TYPE_BLOB -> map[it.getColumnName(i)] = it.getBlob(i)
                         else -> map[it.getColumnName(i)] = null // Padrão
                     }
-                    // --- FIM DA CORREÇÃO ---
                 }
 
                 // Verifica se os totais estão calculados
@@ -288,6 +286,8 @@ class RideDbHelper(context: Context) :
                         map[RidesEntry.COLUMN_AVG_CADENCE] = stats["avg_cadence"]
                         map[RidesEntry.COLUMN_CALORIES] = stats["calories"]
                         map[RidesEntry.COLUMN_END_TIME] = stats["end_time"]
+                        // Atualiza também o start_time no map
+                        map[RidesEntry.COLUMN_START_TIME] = stats["start_time"]
                     }
                 }
 
@@ -342,29 +342,46 @@ class RideDbHelper(context: Context) :
         var prevLon = 0.0
         var firstGpsPoint = true
 
-        // Tenta usar o formato com milissegundos
-        val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS", Locale.getDefault())
+        // <<< INÍCIO DA CORREÇÃO >>>
+        // O formato ISO 8601 inclui o 'T' e tem 6 dígitos de fração de segundo (microssegundos)
+        val dateFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSSSS", Locale.getDefault())
+        val dateFormatFallback = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.getDefault()) // Caso não haja microssegundos
+        val dateFormatFallbackMillis = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS", Locale.getDefault()) // Caso haja milissegundos
+        // <<< FIM DA CORREÇÃO >>>
+
+        val outputDateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS", Locale.getDefault())
+
 
         cursor.use {
             do {
                 // --- Tempo e Duração ---
                 val timestampStr = it.getString(it.getColumnIndexOrThrow(TelemetryEntry.COLUMN_GPS_TIMESTAMP))
                 try {
+                    // Tenta o formato principal (com microssegundos)
                     val timestamp = dateFormat.parse(timestampStr)?.time
                     if (timestamp != null) {
                         if (startTime == null) startTime = timestamp
                         endTime = timestamp
                     }
                 } catch (e: Exception) {
-                    // Tenta formato sem milissegundos se o primeiro falhar
                     try {
-                        val ts = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).parse(timestampStr)?.time
+                        // Tenta o formato com milissegundos
+                        val ts = dateFormatFallbackMillis.parse(timestampStr)?.time
                         if (ts != null) {
                             if (startTime == null) startTime = ts
                             endTime = ts
                         }
                     } catch (e2: Exception) {
-                        Log.w(TAG, "Formato de timestamp inválido: $timestampStr")
+                        try {
+                            // Tenta o formato sem fração de segundo
+                            val ts = dateFormatFallback.parse(timestampStr)?.time
+                            if (ts != null) {
+                                if (startTime == null) startTime = ts
+                                endTime = ts
+                            }
+                        } catch (e3: Exception) {
+                            Log.w(TAG, "Formato de timestamp inválido: $timestampStr")
+                        }
                     }
                 }
 
@@ -398,8 +415,8 @@ class RideDbHelper(context: Context) :
                 val crankVelIdx = it.getColumnIndexOrThrow(TelemetryEntry.COLUMN_CRANK_SPEED)
 
                 if (!it.isNull(velIdx)) {
-                    val velMetersPerSec = it.getDouble(velIdx)
-                    velocities.add(velMetersPerSec * 3.6) // Converte m/s para km/h
+                    val velKmh = it.getDouble(velIdx) // Assumindo que a velocidade já está em km/h
+                    velocities.add(velKmh)
                 } else if (!it.isNull(crankVelIdx)) {
                     // Fallback para a velocidade do crank (assumindo km/h)
                     velocities.add(it.getDouble(crankVelIdx))
@@ -439,8 +456,9 @@ class RideDbHelper(context: Context) :
 
         val result = mapOf(
             "ride_id" to rideId,
-            "start_time" to (startTime?.let { dateFormat.format(Date(it)) } ?: getCurrentTimestamp()),
-            "end_time" to (endTime?.let { dateFormat.format(Date(it)) } ?: getCurrentTimestamp()),
+            // Usa o formato de saída do DB
+            "start_time" to (startTime?.let { outputDateFormat.format(Date(it)) } ?: getCurrentTimestamp()),
+            "end_time" to (endTime?.let { outputDateFormat.format(Date(it)) } ?: getCurrentTimestamp()),
             "total_distance_km" to totalDistanceKm,
             "avg_velocity_kmh" to avgVelocityKmh,
             "avg_power" to avgPower,
@@ -458,6 +476,10 @@ class RideDbHelper(context: Context) :
     fun updateRideSummary(rideId: Long, stats: Map<String, Any?>): Boolean {
         val db = this.writableDatabase
         val values = ContentValues().apply {
+
+            // <<< ESTA É A LINHA QUE FOI ADICIONADA >>>
+            stats["start_time"]?.let { put(RidesEntry.COLUMN_START_TIME, it as String) }
+
             stats["end_time"]?.let { put(RidesEntry.COLUMN_END_TIME, it as String) }
             stats["total_distance_km"]?.let { put(RidesEntry.COLUMN_TOTAL_DISTANCE_KM, it as Double) }
             stats["avg_velocity_kmh"]?.let { put(RidesEntry.COLUMN_AVG_VELOCITY_KMH, it as Double) }
@@ -502,7 +524,6 @@ class RideDbHelper(context: Context) :
                 do {
                     val map = mutableMapOf<String, Any?>()
                     for (i in 0 until it.columnCount) {
-                        // --- CORREÇÃO AQUI ---
                         when (it.getType(i)) {
                             Cursor.FIELD_TYPE_NULL -> map[it.getColumnName(i)] = null
                             Cursor.FIELD_TYPE_INTEGER -> map[it.getColumnName(i)] = it.getLong(i)
@@ -511,7 +532,6 @@ class RideDbHelper(context: Context) :
                             Cursor.FIELD_TYPE_BLOB -> map[it.getColumnName(i)] = it.getBlob(i)
                             else -> map[it.getColumnName(i)] = null // Padrão
                         }
-                        // --- FIM DA CORREÇÃO ---
                     }
                     results.add(map)
                 } while (it.moveToNext())

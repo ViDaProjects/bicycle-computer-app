@@ -54,6 +54,19 @@ class BleServerService : Service() {
      */
     private val dataProcessingExecutor = Executors.newSingleThreadExecutor()
 
+    // <<< ADICIONADO >>> Handlers para o "Heartbeat" (ping)
+    private val heartbeatHandler = Handler(Looper.getMainLooper())
+    private val heartbeatRunnable = object : Runnable {
+        override fun run() {
+            // Envia um "ping" simples
+            sendData("ping".toByteArray(Charsets.UTF_8))
+            log("Enviando heartbeat 'ping'...")
+            // Agenda o próximo ping
+            heartbeatHandler.postDelayed(this, 3000) // A cada 3 segundos
+        }
+    }
+
+
     // --- Constants ---
     companion object {
         private const val TAG = "BleServerService"
@@ -75,7 +88,7 @@ class BleServerService : Service() {
         // Constante para o atraso de reinício do advertising
         private const val ADVERTISING_RESTART_DELAY_MS = 500L
 
-        // <<< MUDANÇA: Flag estática para o estado do serviço
+        // Flag estática para o estado do serviço
         @JvmStatic var isServiceRunning = false
     }
 
@@ -102,10 +115,38 @@ class BleServerService : Service() {
         }
     }
 
+    // --- <<< INÍCIO DA CORREÇÃO: NOVO RECEIVER >>> ---
+    /**
+     * Este BroadcastReceiver monitora o estado do adaptador Bluetooth do celular.
+     * Se o usuário desligar o Bluetooth, este receiver será chamado e
+     * o serviço será interrompido.
+     */
+    private val bluetoothStateReceiver = object : BroadcastReceiver() {
+        @RequiresPermission(Manifest.permission.BLUETOOTH_ADVERTISE)
+        override fun onReceive(context: Context?, intent: Intent?) {
+            if (intent?.action == BluetoothAdapter.ACTION_STATE_CHANGED) {
+                val state = intent.getIntExtra(BluetoothAdapter.EXTRA_STATE, BluetoothAdapter.ERROR)
+                when (state) {
+                    BluetoothAdapter.STATE_OFF, BluetoothAdapter.STATE_TURNING_OFF -> {
+                        log("!!! Bluetooth adapter foi desligado. Parando o serviço...")
+                        // Para o advertising
+                        if (ActivityCompat.checkSelfPermission(applicationContext, Manifest.permission.BLUETOOTH_ADVERTISE) == PackageManager.PERMISSION_GRANTED) {
+                            stopAdvertising()
+                        }
+                        // Para o próprio serviço
+                        stopSelf()
+                    }
+                }
+            }
+        }
+    }
+    // --- <<< FIM DA CORREÇÃO >>> ---
+
+
     // --- Service Lifecycle ---
     override fun onCreate() {
         super.onCreate()
-        // <<< MUDANÇA: Atualiza a flag estática
+        // Atualiza a flag estática
         isServiceRunning = true
 
         log("Service creating...")
@@ -118,9 +159,17 @@ class BleServerService : Service() {
         } catch (e: Exception) { log("!!! Error getting Advertiser: ${e.message}."); stopSelf(); return }
 
         createNotificationChannel()
+
+        // Registra o receiver de COMANDOS (seu código atual)
         val intentFilter = IntentFilter().apply { addAction(ACTION_START_ADVERTISING); addAction(ACTION_STOP_ADVERTISING); addAction(ACTION_SEND_DATA) }
         ContextCompat.registerReceiver(this, commandReceiver, intentFilter, ContextCompat.RECEIVER_NOT_EXPORTED)
         log("Advertising receiver registered.")
+
+        // --- <<< INÍCIO DA CORREÇÃO: REGISTRAR O NOVO RECEIVER >>> ---
+        val btStateFilter = IntentFilter(BluetoothAdapter.ACTION_STATE_CHANGED)
+        registerReceiver(bluetoothStateReceiver, btStateFilter)
+        log("Bluetooth state receiver registered.")
+        // --- <<< FIM DA CORREÇÃO >>> ---
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -139,14 +188,19 @@ class BleServerService : Service() {
     @RequiresPermission(Manifest.permission.BLUETOOTH_ADVERTISE)
     override fun onDestroy() {
         super.onDestroy()
-        // <<< MUDANÇA: Atualiza a flag estática
+        // Atualiza a flag estática
         isServiceRunning = false
 
         log("Service destroying (onDestroy)...")
         mainHandler.removeCallbacksAndMessages(null) // Remove advertising retries
         stopAdvertising() // Ensure advertising stops
         stopServer()
+
+        // --- <<< INÍCIO DA CORREÇÃO: DESREGISTRAR OS RECEIVERS >>> ---
         try { unregisterReceiver(commandReceiver) } catch (ignore: Exception) {}
+        try { unregisterReceiver(bluetoothStateReceiver) } catch (ignore: Exception) {} // Desregistra o novo
+        // --- <<< FIM DA CORREÇÃO >>> ---
+
         dbHelper.close()
         // Desliga o executor
         try {
@@ -223,6 +277,9 @@ class BleServerService : Service() {
             return
         }
         try {
+            // <<< ADICIONADO >>> Para o timer do heartbeat
+            heartbeatHandler.removeCallbacks(heartbeatRunnable)
+
             if (connectedDevices.isNotEmpty()) {
                 log("Desconectando ${connectedDevices.size} dispositivo(s) conectado(s)...")
                 for (device in connectedDevices.toList()) {
@@ -445,6 +502,7 @@ class BleServerService : Service() {
          * LÓGICA CORRIGIDA para 'onConnectionStateChange'
          * Esta função agora lida corretamente com o início/parada do advertising
          * para evitar a "condição de corrida".
+         * Também inicia/para o "heartbeat".
          */
         override fun onConnectionStateChange(device: BluetoothDevice, status: Int, newState: Int) {
             mainHandler.post {
@@ -473,11 +531,18 @@ class BleServerService : Service() {
                         log("!!! Não pode parar o advertising (sem permissão)")
                     }
 
+                    // <<< ADICIONADO >>> Inicia o timer do heartbeat
+                    heartbeatHandler.postDelayed(heartbeatRunnable, 3000)
+
                 } else if (newState == BluetoothProfile.STATE_DISCONNECTED) {
                     // B. ESTADO: DESCONECTADO
                     log("Device disconnected: $deviceAddress - Status: $statusText")
                     connectedDevices.remove(device)
                     receivedDataBuffers.remove(deviceAddress)
+
+                    // <<< ADICIONADO >>> Para o timer do heartbeat
+                    heartbeatHandler.removeCallbacks(heartbeatRunnable)
+
 
                     // Reinicie o advertising (COM O ATRASO)
                     if (ActivityCompat.checkSelfPermission(applicationContext, Manifest.permission.BLUETOOTH_ADVERTISE) == PackageManager.PERMISSION_GRANTED) {
@@ -584,8 +649,14 @@ class BleServerService : Service() {
             val deviceAddress = try { device.address } catch (ignore: SecurityException) { "Perm. denied" }
             mainHandler.post {
                 if (ActivityCompat.checkSelfPermission(applicationContext, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) { /*...*/ return@post }
-                if (descriptor.uuid == GattProfile.CLIENT_CHARACTERISTIC_CONFIG) { log("Write to CCCD from $deviceAddress."); if (responseNeeded) sendGattResponse(device, requestId, BluetoothGatt.GATT_SUCCESS) }
-                else { log("WARNING: Write to descriptor ${descriptor.uuid}"); if (responseNeeded) sendGattResponse(device, requestId, BluetoothGatt.GATT_REQUEST_NOT_SUPPORTED) }
+                if (descriptor.uuid == GattProfile.CLIENT_CHARACTERISTIC_CONFIG) {
+                    log("Write to CCCD from $deviceAddress. Cliente (PC) 'assinou' as notificações.")
+                    if (responseNeeded) sendGattResponse(device, requestId, BluetoothGatt.GATT_SUCCESS)
+                }
+                else {
+                    log("WARNING: Write to descriptor ${descriptor.uuid}")
+                    if (responseNeeded) sendGattResponse(device, requestId, BluetoothGatt.GATT_REQUEST_NOT_SUPPORTED)
+                }
             }
         }
         override fun onServiceAdded(status: Int, service: BluetoothGattService?) { mainHandler.post { log("Serviço ${service?.uuid} adicionado: ${BluetoothUtils.gattStatusToString(status)}") } }
