@@ -29,7 +29,8 @@ import java.util.*
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.util.zip.GZIPInputStream
-//import java.util.zip.InflaterInputStream
+// Adicionada importação para o Executor
+import java.util.concurrent.Executors
 
 class BleServerService : Service() {
 
@@ -46,6 +47,12 @@ class BleServerService : Service() {
 
     // Buffer for received data in chunks
     private val receivedDataBuffers = mutableMapOf<String, ByteArrayOutputStream>()
+
+    /**
+     * Um thread pool dedicado (com um único thread) para processar dados recebidos
+     * (GZIP, JSON, e escrita no DB) fora da thread principal, evitando ANRs.
+     */
+    private val dataProcessingExecutor = Executors.newSingleThreadExecutor()
 
     // --- Constants ---
     companion object {
@@ -64,6 +71,12 @@ class BleServerService : Service() {
         private const val NOTIFICATION_ID = 1
         private const val NOTIFICATION_CHANNEL_ID = "ble_server_channel_v1"
         private const val NOTIFICATION_CHANNEL_NAME = "BLE Server Service"
+
+        // Constante para o atraso de reinício do advertising
+        private const val ADVERTISING_RESTART_DELAY_MS = 500L
+
+        // <<< MUDANÇA: Flag estática para o estado do serviço
+        @JvmStatic var isServiceRunning = false
     }
 
     // AdvertiseCallback
@@ -92,6 +105,9 @@ class BleServerService : Service() {
     // --- Service Lifecycle ---
     override fun onCreate() {
         super.onCreate()
+        // <<< MUDANÇA: Atualiza a flag estática
+        isServiceRunning = true
+
         log("Service creating...")
         dbHelper = com.beforbike.app.database.RideDbHelper(this)
         bluetoothManager = getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
@@ -123,12 +139,21 @@ class BleServerService : Service() {
     @RequiresPermission(Manifest.permission.BLUETOOTH_ADVERTISE)
     override fun onDestroy() {
         super.onDestroy()
+        // <<< MUDANÇA: Atualiza a flag estática
+        isServiceRunning = false
+
         log("Service destroying (onDestroy)...")
         mainHandler.removeCallbacksAndMessages(null) // Remove advertising retries
         stopAdvertising() // Ensure advertising stops
         stopServer()
         try { unregisterReceiver(commandReceiver) } catch (ignore: Exception) {}
         dbHelper.close()
+        // Desliga o executor
+        try {
+            dataProcessingExecutor.shutdown()
+        } catch (e: Exception) {
+            log("!!! Erro ao desligar dataProcessingExecutor: ${e.message}")
+        }
         log("BLE service stopped.")
     }
 
@@ -300,6 +325,7 @@ class BleServerService : Service() {
     }
 
     // --- Received Data Processing ---
+    // Esta função agora é chamada a partir de um thread de segundo plano
     private fun processReceivedData(deviceAddress: String, data: ByteArray): Boolean {
         try {
             var jsonString: String
@@ -383,10 +409,13 @@ class BleServerService : Service() {
             //     if (stats != null) dbHelper.updateRideSummary(rideIdFromJson, stats)
             // }
 
+            // Retorna 'true' se o processamento foi concluído (mesmo que alguns itens tenham falhado)
             return true
 
         } catch (e: Exception) {
             log("!!! General error in data processing (is data a valid JSONArray?): ${e.message}")
+            // Retorna 'false' se a estrutura inteira falhou (ex: não é um JSONArray)
+            // Isso fará com que o buffer NÃO seja limpo e espere por mais dados.
             return false
         }
     }
@@ -411,70 +440,145 @@ class BleServerService : Service() {
 
     // --- BLE Callbacks ---
     private val gattServerCallback = object : BluetoothGattServerCallback() {
+
+        /**
+         * LÓGICA CORRIGIDA para 'onConnectionStateChange'
+         * Esta função agora lida corretamente com o início/parada do advertising
+         * para evitar a "condição de corrida".
+         */
         override fun onConnectionStateChange(device: BluetoothDevice, status: Int, newState: Int) {
             mainHandler.post {
+                // --- Logging ---
                 val statusText = BluetoothUtils.gattStatusToString(status)
                 val stateText = BluetoothUtils.connectionStateToString(newState)
                 val deviceAddress = try { device.address } catch (ignore: SecurityException) { "Perm. denied" }
-                val deviceName = try { if (ActivityCompat.checkSelfPermission(applicationContext, Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED) device.name ?: "No name" else "Perm. denied" } catch (ignore: Exception) { "?" }
+                val deviceName = try {
+                    if (ActivityCompat.checkSelfPermission(applicationContext, Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED)
+                        device.name ?: "No name"
+                    else "Perm. denied"
+                } catch (ignore: Exception) { "?" }
+                // --- Fim Logging ---
+
+
+                // --- LÓGICA CORRIGIDA ---
                 if (newState == BluetoothProfile.STATE_CONNECTED) {
+                    // A. ESTADO: CONECTADO
                     log("Device connected: $deviceAddress ($deviceName) - Status: $statusText")
                     connectedDevices.add(device)
-                }
-                else if (newState == BluetoothProfile.STATE_DISCONNECTED) {
+
+                    // Pare o advertising
+                    if (ActivityCompat.checkSelfPermission(applicationContext, Manifest.permission.BLUETOOTH_ADVERTISE) == PackageManager.PERMISSION_GRANTED) {
+                        stopAdvertising()
+                    } else {
+                        log("!!! Não pode parar o advertising (sem permissão)")
+                    }
+
+                } else if (newState == BluetoothProfile.STATE_DISCONNECTED) {
+                    // B. ESTADO: DESCONECTADO
                     log("Device disconnected: $deviceAddress - Status: $statusText")
                     connectedDevices.remove(device)
-                    // Clear buffer for disconnected device
                     receivedDataBuffers.remove(deviceAddress)
+
+                    // Reinicie o advertising (COM O ATRASO)
+                    if (ActivityCompat.checkSelfPermission(applicationContext, Manifest.permission.BLUETOOTH_ADVERTISE) == PackageManager.PERMISSION_GRANTED) {
+
+                        // Use o atraso para evitar a "race condition"
+                        mainHandler.postDelayed({
+                            // Verifique o estado NOVAMENTE, caso algo tenha mudado
+                            if (!isAdvertising && bluetoothGattServer != null) {
+                                log("Reiniciando advertising (após atraso) para aceitar novas conexões...")
+                                startAdvertising(currentCompanyId, currentSecretKey)
+                            } else {
+                                log("Não foi necessário reiniciar o advertising (já ativo ou servidor parado).")
+                            }
+                        }, ADVERTISING_RESTART_DELAY_MS) // Usa a constante
+
+                    } else {
+                        log("!!! Não pode reiniciar o advertising (sem permissão)")
+                    }
                 }
+                // --- FIM DA LÓGICA CORRIGIDA ---
             }
         }
 
+        /**
+         * LÓGICA CORRIGIDA para 'onCharacteristicWriteRequest' (NÃO-BLOQUEANTE)
+         * Esta função agora move o trabalho pesado (DB) para um
+         * thread em segundo plano, mantendo a thread principal livre.
+         */
         override fun onCharacteristicWriteRequest(
             device: BluetoothDevice, requestId: Int, characteristic: BluetoothGattCharacteristic,
             preparedWrite: Boolean, responseNeeded: Boolean, offset: Int, value: ByteArray
         ) {
             mainHandler.post {
                 val deviceAddress = try { device.address } catch (ignore: SecurityException) { "Perm. denied" }
+
+                // 1. Validação de permissão (na main thread)
                 if (ActivityCompat.checkSelfPermission(applicationContext, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
                     log("!!! No CONNECT permission in Write Request for $deviceAddress.")
-                    if (responseNeeded) { try { bluetoothGattServer?.sendResponse(device, requestId, BluetoothGatt.GATT_WRITE_NOT_PERMITTED, 0, null) } catch (ignore: Exception) {} }
+                    if (responseNeeded) { sendGattResponse(device, requestId, BluetoothGatt.GATT_WRITE_NOT_PERMITTED) }
                     return@post
                 }
-                var gattStatus = BluetoothGatt.GATT_SUCCESS
+
                 if (characteristic.uuid == GattProfile.UUID_CHAR_DATA) {
                     try {
+                        // 2. Adiciona dados ao buffer (na main thread - rápido)
                         val deviceKey = deviceAddress
-
-                        // Adiciona dados ao buffer
                         val buffer = receivedDataBuffers.getOrPut(deviceKey) { ByteArrayOutputStream() }
                         buffer.write(value)
 
-                        // Tenta processar os dados (verifica se é o fim dos dados)
-                        val processed = processReceivedData(deviceAddress, buffer.toByteArray())
+                        // Copia os dados para enviar ao outro thread
+                        val dataToProcess = buffer.toByteArray()
 
-                        if (processed) {
-                            // Dados processados com sucesso, limpa o buffer
-                            receivedDataBuffers.remove(deviceKey)
-                            log("Dados processados e buffer limpo para $deviceAddress")
-                        } else {
-                            // Ainda aguardando mais dados
-                            log("Aguardando mais dados de $deviceAddress (${buffer.size()} bytes recebidos)")
-                        }
+                        // 3. Envia o trabalho pesado (processReceivedData) para o thread de processamento
+                        dataProcessingExecutor.submit {
+                            var processingSuccess = false
+                            var gattStatus = BluetoothGatt.GATT_FAILURE
+
+                            try {
+                                // 4. Isso agora roda em SEGUNDO PLANO
+                                processingSuccess = processReceivedData(deviceAddress, dataToProcess)
+
+                                if (processingSuccess) {
+                                    // Deu certo, limpa o buffer
+                                    mainHandler.post { receivedDataBuffers.remove(deviceKey) }
+                                    log("Dados processados e buffer limpo para $deviceAddress")
+                                    gattStatus = BluetoothGatt.GATT_SUCCESS
+                                } else {
+                                    // Não deu certo (provavelmente dados parciais)
+                                    log("Aguardando mais dados de $deviceAddress (${dataToProcess.size} bytes recebidos)")
+                                    // Se NÃO foi sucesso, não limpa o buffer
+                                    // Responde SUCESSO mesmo assim para o cliente
+                                    gattStatus = BluetoothGatt.GATT_SUCCESS
+                                }
+
+                            } catch (e: Exception) {
+                                log("!!! EXCEPTION in data processing (background): ${e.message}")
+                                // Se deu erro, limpa o buffer
+                                mainHandler.post { receivedDataBuffers.remove(deviceKey) }
+                                gattStatus = BluetoothGatt.GATT_FAILURE
+
+                            } finally {
+                                // 5. Responde ao cliente DEPOIS de processar
+                                if (responseNeeded) {
+                                    mainHandler.post { // A resposta DEVE ser na main thread
+                                        sendGattResponse(device, requestId, gattStatus)
+                                    }
+                                }
+                            }
+                        } // Fim do dataProcessingExecutor.submit
 
                     } catch (e: Exception) {
-                        log("!!! EXCEPTION in data processing: ${e.message}")
-                        // Clear buffer on error
+                        log("!!! EXCEPTION in write request (main): ${e.message}")
                         receivedDataBuffers.remove(deviceAddress)
-                        gattStatus = BluetoothGatt.GATT_FAILURE
+                        if (responseNeeded) { sendGattResponse(device, requestId, BluetoothGatt.GATT_FAILURE) }
                     }
                 } else {
                     log("Write to unknown UUID.")
-                    gattStatus = BluetoothGatt.GATT_REQUEST_NOT_SUPPORTED
+                    if (responseNeeded) { sendGattResponse(device, requestId, BluetoothGatt.GATT_REQUEST_NOT_SUPPORTED) }
                 }
-                if (responseNeeded) { sendGattResponse(device, requestId, gattStatus) }
             }
-        }
+        } // Fim do onCharacteristicWriteRequest
 
         override fun onDescriptorWriteRequest( device: BluetoothDevice, requestId: Int, descriptor: BluetoothGattDescriptor, preparedWrite: Boolean, responseNeeded: Boolean, offset: Int, value: ByteArray ) {
             val deviceAddress = try { device.address } catch (ignore: SecurityException) { "Perm. denied" }

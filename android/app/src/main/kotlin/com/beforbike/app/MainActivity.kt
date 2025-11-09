@@ -14,7 +14,7 @@ import android.bluetooth.*
 import android.bluetooth.le.*
 import android.os.ParcelUuid
 import android.util.Log
-import com.beforbike.app.BleServerService
+import com.beforbike.app.BleServerService // Importe o serviço
 import com.beforbike.app.database.RideDbHelper
 import com.beforbike.app.database.SeedData
 import java.text.SimpleDateFormat
@@ -22,6 +22,11 @@ import java.util.Locale
 
 class MainActivity: FlutterActivity() {
     private val CHANNEL = "com.beforbike.ble"
+
+    // Variáveis para a lógica de permissão assíncrona
+    private var permissionRequestResult: MethodChannel.Result? = null
+    private val REQUEST_CODE_PERMISSIONS = 1 // O código de requisição
+
     private lateinit var bluetoothAdapter: BluetoothAdapter
     private var bluetoothLeAdvertiser: BluetoothLeAdvertiser? = null
     private var bluetoothGatt: BluetoothGatt? = null
@@ -31,21 +36,46 @@ class MainActivity: FlutterActivity() {
     private var scanning = false
     private val handler = android.os.Handler(android.os.Looper.getMainLooper())
 
+    /**
+     * Callback para quando o usuário responde ao pedido de permissão.
+     */
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults) // Importante
+
+        if (requestCode == REQUEST_CODE_PERMISSIONS) {
+            val allGranted = grantResults.isNotEmpty() && grantResults.all { it == PackageManager.PERMISSION_GRANTED }
+
+            if (allGranted) {
+                Log.d("BLE", "Todas as permissões foram concedidas pelo usuário.")
+                // Envia o sucesso DE VOLTA para o Flutter
+                this.permissionRequestResult?.success(true)
+            } else {
+                Log.e("BLE", "Permissões negadas pelo usuário.")
+                // Envia um erro DE VOLTA para o Flutter
+                this.permissionRequestResult?.error("PERMISSIONS_DENIED", "Usuário negou as permissões", null)
+            }
+            // Limpa o 'result' para a próxima vez
+            this.permissionRequestResult = null
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         dbHelper = RideDbHelper(this)
 
         // Enable seed data: uncomment next line to insert sample ride for testing
-        SeedData.insertSampleRide(applicationContext)
+        // SeedData.insertSampleRide(applicationContext)
 
         val bluetoothManager = getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
         bluetoothAdapter = bluetoothManager.adapter
         bluetoothLeAdvertiser = bluetoothAdapter.bluetoothLeAdvertiser
 
-        // Start BLE service automatically when app launches
-        if (bluetoothAdapter.isEnabled) {
+        // <<< MUDANÇA: Inicia o serviço SOMENTE se ele não estiver rodando (usando a flag estática)
+        if (bluetoothAdapter.isEnabled && !BleServerService.isServiceRunning) {
             Log.d("BLE", "Starting BLE service automatically on app launch")
             startBleServerService()
+        } else if (BleServerService.isServiceRunning) {
+            Log.d("BLE", "Service already running, no need to start automatically.")
         }
 
         MethodChannel(flutterEngine?.dartExecutor?.binaryMessenger!!, "com.beforbike.app/database").setMethodCallHandler { call, result ->
@@ -114,12 +144,18 @@ class MainActivity: FlutterActivity() {
 
         MethodChannel(flutterEngine?.dartExecutor?.binaryMessenger!!, CHANNEL).setMethodCallHandler { call, result ->
             when (call.method) {
+                // <<< MUDANÇA: Lógica de permissão assíncrona
                 "requestPermissions" -> {
+                    // 1. Salva o 'result' para responder depois
+                    this.permissionRequestResult = result
+                    // 2. Chama a função que abre a caixa de diálogo
                     requestBlePermissions()
-                    result.success(true)
+                    // NÃO chame result.success(true) aqui!
                 }
+
+                // <<< MUDANÇA: Usa a flag estática
                 "isBleEnabled" -> {
-                    result.success(isBleServiceRunning())
+                    result.success(BleServerService.isServiceRunning)
                 }
                 "isBluetoothAdapterEnabled" -> {
                     result.success(bluetoothAdapter.isEnabled)
@@ -179,18 +215,19 @@ class MainActivity: FlutterActivity() {
                     }
                     result.success(mac)
                 }
+
+                // <<< MUDANÇA: Usa a flag estática
                 "setBleEnabled" -> {
                     val enabled = call.argument<Boolean>("enabled") ?: false
-                    val isRunning = isBleServiceRunning()
+                    val isRunning = BleServerService.isServiceRunning // Usa a nova flag
 
                     if (enabled && !isRunning) {
                         // Start BLE service if not already running
-                        Log.d("BLE", "Starting BLE service (always attempt regardless of permissions)")
+                        Log.d("BLE", "Starting BLE service (via setBleEnabled)")
                         startBleServerService()
-                        Log.d("BLE", "BLE service start command sent")
                     } else if (!enabled && isRunning) {
                         // Stop BLE service if running
-                        Log.d("BLE", "Stopping BLE service")
+                        Log.d("BLE", "Stopping BLE service (via setBleEnabled)")
                         stopBleServerService()
                     }
                     result.success(true)
@@ -237,13 +274,14 @@ class MainActivity: FlutterActivity() {
         }
     }
 
+    /**
+     * Lógica de permissão corrigida para lidar com o caso "já concedido".
+     */
     private fun requestBlePermissions() {
-        // Always request all BLE-related permissions regardless of current status
-        // This ensures we get the latest permission state
+        // (O seu código de construir a 'permissions list' continua o mesmo)
         val permissions = listOf(
             Manifest.permission.ACCESS_FINE_LOCATION,
-            Manifest.permission.BLUETOOTH,
-            Manifest.permission.BLUETOOTH_ADMIN,
+            Manifest.permission.ACCESS_COARSE_LOCATION, // Adicione se necessário
         ).plus(
             if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
                 listOf(
@@ -252,6 +290,10 @@ class MainActivity: FlutterActivity() {
                     Manifest.permission.BLUETOOTH_ADVERTISE,
                 )
             } else emptyList()
+        ).plus(
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+                listOf(Manifest.permission.POST_NOTIFICATIONS)
+            } else emptyList()
         )
 
         val missingPermissions = permissions.filter {
@@ -259,13 +301,16 @@ class MainActivity: FlutterActivity() {
         }.toTypedArray()
 
         if (missingPermissions.isNotEmpty()) {
-            Log.d("BLE", "Requesting permissions: ${missingPermissions.joinToString()}")
-            ActivityCompat.requestPermissions(this, missingPermissions, 1)
+            Log.d("BLE", "Requisitando permissões: ${missingPermissions.joinToString()}")
+            // Use a constante
+            ActivityCompat.requestPermissions(this, missingPermissions, REQUEST_CODE_PERMISSIONS)
         } else {
-            Log.d("BLE", "All permissions already granted")
+            Log.d("BLE", "Todas as permissões já estavam concedidas.")
+            // Se já temos, responda ao Flutter imediatamente
+            this.permissionRequestResult?.success(true)
+            this.permissionRequestResult = null
         }
     }
-
 
     private fun scanAndConnectDevice() {
         if (!bluetoothAdapter.isEnabled) {
@@ -350,15 +395,12 @@ class MainActivity: FlutterActivity() {
         connectedDevice = null
     }
 
+    // <<< MUDANÇA: FUNÇÃO DELETADA >>>
+    /*
     private fun isBleServiceRunning(): Boolean {
-        val manager = getSystemService(Context.ACTIVITY_SERVICE) as android.app.ActivityManager
-        for (service in manager.getRunningServices(Int.MAX_VALUE)) {
-            if (BleServerService::class.java.name == service.service.className) {
-                return true
-            }
-        }
-        return false
+        // ... Esta função foi removida ...
     }
+    */
 
     private fun startBleServerService() {
         val intent = Intent(this, BleServerService::class.java)
