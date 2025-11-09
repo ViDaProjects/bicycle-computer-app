@@ -11,18 +11,19 @@ import '../../metrics/view_model/metrics_view_model.dart';
 import 'state/timer_state.dart';
 
 final timerViewModelProvider =
-    StateNotifierProvider.autoDispose<TimerViewModel, TimerState>(
-  (ref) => TimerViewModel(ref),
+    NotifierProvider.autoDispose<TimerViewModel, TimerState>(
+  () => TimerViewModel(),
 );
 
-class TimerViewModel extends StateNotifier<TimerState> {
-  final Ref ref;
+class TimerViewModel extends Notifier<TimerState> {
   late Timer? timer;
   late final Stopwatch stopwatch = Stopwatch();
   final Duration _timerDuration = const Duration(seconds: 1);
 
-  /// Represents the view model for a timer.
-  TimerViewModel(this.ref) : super(TimerState.initial());
+  @override
+  TimerState build() {
+    return TimerState.initial();
+  }
 
   /// Starts the timer.
   void startTimer() {

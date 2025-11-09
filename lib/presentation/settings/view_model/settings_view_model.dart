@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:quickalert/quickalert.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -16,22 +16,20 @@ import 'state/settings_state.dart';
 const String bleChannel = 'com.beforbike.ble';
 
 final settingsViewModelProvider =
-    StateNotifierProvider.autoDispose<SettingsViewModel, SettingsState>(
-  (ref) => SettingsViewModel(ref),
+    NotifierProvider<SettingsViewModel, SettingsState>(
+  () => SettingsViewModel(),
 );
 
-class SettingsViewModel extends StateNotifier<SettingsState> {
-  Ref ref;
+class SettingsViewModel extends Notifier<SettingsState> {
   static const MethodChannel _channel = MethodChannel(bleChannel);
   static const MethodChannel _databaseChannel = MethodChannel('com.beforbike.app/database');
 
-  /// Manages the state and logic of the settings screen.
-  ///
-  /// [ref] - The reference to the hooks riverpod container.
-  SettingsViewModel(this.ref) : super(SettingsState.initial()) {
+  @override
+  SettingsState build() {
     // Initialize BLE status
     _updateBluetoothStatus();
     _loadVisibilitySettings();
+    return SettingsState.initial();
   }
 
   /// Loads visibility settings from SharedPreferences.
@@ -174,8 +172,8 @@ class SettingsViewModel extends StateNotifier<SettingsState> {
   void toggleDarkMode() {
     state = state.copyWith(isDarkMode: !state.isDarkMode);
     // Update the global theme mode
-    ref.read(themeModeProvider.notifier).state =
-        state.isDarkMode ? ThemeMode.dark : ThemeMode.light;
+    ref.read(themeModeProvider.notifier).setThemeMode(
+        state.isDarkMode ? ThemeMode.dark : ThemeMode.light);
   }
 
   /// Toggles the speed chart visibility and sends command to bicycle computer.

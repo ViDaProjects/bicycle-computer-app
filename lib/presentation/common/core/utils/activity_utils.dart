@@ -54,7 +54,7 @@ class ActivityUtils {
     return activities;
   }
 
-  static Future<void> updateActivity(Ref<Object?> ref, Activity updatedActivity,
+  static Future<void> updateActivity(Ref ref, Activity updatedActivity,
       ActivityUpdateActionEnum action) async {
     await _updateActivityList(
         ref,
@@ -74,7 +74,7 @@ class ActivityUtils {
     }
   }
 
-  static Future<void> _updateActivityList(Ref<Object?> ref, String listType,
+  static Future<void> _updateActivityList(Ref ref, String listType,
       Activity updatedActivity, ActivityUpdateActionEnum action) async {
     var data = ref
         .read(infiniteScrollListViewModelProvider(listType))

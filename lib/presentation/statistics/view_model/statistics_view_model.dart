@@ -6,20 +6,19 @@ import '../../../domain/entities/activity.dart';
 import 'state/statistics_state.dart';
 
 final statisticsViewModelProvider =
-    StateNotifierProvider.autoDispose<StatisticsViewModel, StatisticsState>(
-  (ref) => StatisticsViewModel(ref),
+    NotifierProvider.autoDispose<StatisticsViewModel, StatisticsState>(
+  () => StatisticsViewModel(),
 );
 
-class StatisticsViewModel extends StateNotifier<StatisticsState> {
-  final Ref ref;
+class StatisticsViewModel extends Notifier<StatisticsState> {
   static const platform = MethodChannel('com.beforbike.app/database');
   
   Timer? _debounceTimer;
 
-  /// Manages the state and logic of the statistics screen.
-  ///
-  /// [ref] - The reference to the hooks riverpod container.
-  StatisticsViewModel(this.ref) : super(StatisticsState.initial());
+  @override
+  StatisticsState build() {
+    return StatisticsState.initial();
+  }
 
   /// Sets the selected activity for detailed statistics.
   void setSelectedActivity(Activity? activity) {
@@ -140,11 +139,5 @@ class StatisticsViewModel extends StateNotifier<StatisticsState> {
     } catch (e) {
       return 0.0;
     }
-  }
-
-  @override
-  void dispose() {
-    _debounceTimer?.cancel();
-    super.dispose();
   }
 }

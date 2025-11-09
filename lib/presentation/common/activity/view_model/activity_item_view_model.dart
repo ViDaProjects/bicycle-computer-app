@@ -11,19 +11,22 @@ import '../../user/view_model/profile_picture_view_model.dart';
 import 'state/activity_item_state.dart';
 
 /// Provider for the activity item view model.
-final activityItemViewModelProvider = StateNotifierProvider.family<
+final activityItemViewModelProvider = NotifierProvider.family<
     ActivityItemViewModel,
     ActivityItemState,
-    String>((ref, activityId) => ActivityItemViewModel(ref, activityId));
+    String>((activityId) => ActivityItemViewModel(activityId));
 
 /// View model for the activity item widget.
-class ActivityItemViewModel extends StateNotifier<ActivityItemState> {
+class ActivityItemViewModel extends Notifier<ActivityItemState> {
   final String activityId;
-  final Ref ref;
   final TextEditingController commentController = TextEditingController();
 
-  ActivityItemViewModel(this.ref, this.activityId)
-      : super(ActivityItemState.initial());
+  ActivityItemViewModel(this.activityId);
+
+  @override
+  ActivityItemState build() {
+    return ActivityItemState.initial();
+  }
 
   /// Sets the activity in the state
   void setActivity(Activity activity) {

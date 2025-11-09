@@ -3,21 +3,22 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'state/infinite_scroll_list_state.dart';
 
 /// Provider for the infinite scroll list view model.
-final infiniteScrollListViewModelProvider = StateNotifierProvider.family<
+final infiniteScrollListViewModelProvider = NotifierProvider.family<
     InfiniteScrollListViewModel,
     InfiniteScrollListState,
-    String>((ref, listId) {
-  return InfiniteScrollListViewModel(ref, listId);
-});
+    String>((listId) => InfiniteScrollListViewModel(listId));
 
 /// View model for the infinite scroll list interaction widget.
 class InfiniteScrollListViewModel
-    extends StateNotifier<InfiniteScrollListState> {
+    extends Notifier<InfiniteScrollListState> {
   final String listId;
-  final Ref ref;
 
-  InfiniteScrollListViewModel(this.ref, this.listId)
-      : super(InfiniteScrollListState.initial());
+  InfiniteScrollListViewModel(this.listId);
+
+  @override
+  InfiniteScrollListState build() {
+    return InfiniteScrollListState.initial();
+  }
 
   /// Set isLoading in the state
   void setIsLoading(bool isLoading) {

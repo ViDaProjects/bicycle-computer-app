@@ -4,20 +4,23 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'state/activity_list_state.dart';
 
 /// Provider for the activity list view model.
-final activityListWidgetViewModelProvider = StateNotifierProvider.family<
+final activityListWidgetViewModelProvider = NotifierProvider.family<
     ActivityListWidgetViewModel,
     ActivityListWidgetState,
-    String>((ref, listId) => ActivityListWidgetViewModel(ref, listId));
+    String>((listId) => ActivityListWidgetViewModel(listId));
 
 /// View model for the activity item widget.
 class ActivityListWidgetViewModel
-    extends StateNotifier<ActivityListWidgetState> {
-  final Ref ref;
+    extends Notifier<ActivityListWidgetState> {
   final String listId;
   final ScrollController scrollController = ScrollController();
 
-  ActivityListWidgetViewModel(this.ref, this.listId)
-      : super(ActivityListWidgetState.initial());
+  ActivityListWidgetViewModel(this.listId);
+
+  @override
+  ActivityListWidgetState build() {
+    return ActivityListWidgetState.initial();
+  }
 
   int calculateTotalElements(List<dynamic> listOfLists) {
     int totalElements =

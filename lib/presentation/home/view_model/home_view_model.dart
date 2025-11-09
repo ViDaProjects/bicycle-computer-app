@@ -4,15 +4,15 @@ import '../../../domain/entities/activity.dart';
 import 'state/home_state.dart';
 
 final homeViewModelProvider =
-    StateNotifierProvider.autoDispose<HomeViewModel, HomeState>(
-  (ref) => HomeViewModel(ref),
+    NotifierProvider.autoDispose<HomeViewModel, HomeState>(
+  () => HomeViewModel(),
 );
 
-class HomeViewModel extends StateNotifier<HomeState> {
-  final Ref ref;
-
-  /// Constructs a `HomeViewModel` with the provided [ref] and an initial [HomeState].
-  HomeViewModel(this.ref) : super(HomeState.initial());
+class HomeViewModel extends Notifier<HomeState> {
+  @override
+  HomeState build() {
+    return HomeState.initial();
+  }
 
   /// Returns the current index value from the state.
   int getCurrentIndex() {

@@ -10,24 +10,17 @@ import '../../timer/viewmodel/timer_view_model.dart';
 import 'state/location_state.dart';
 
 final locationViewModelProvider =
-    StateNotifierProvider<LocationViewModel, LocationState>(
-  (ref) => LocationViewModel(ref),
+    NotifierProvider<LocationViewModel, LocationState>(
+  () => LocationViewModel(),
 );
 
 /// View model for managing location-related functionality.
-class LocationViewModel extends StateNotifier<LocationState> {
-  final Ref ref;
+class LocationViewModel extends Notifier<LocationState> {
   StreamSubscription<Position>? _positionStream;
 
-  /// Creates a [LocationViewModel] instance.
-  ///
-  /// The [ref] is a reference to the current provider reference.
-  LocationViewModel(this.ref) : super(LocationState.initial());
-
   @override
-  Future<void> dispose() async {
-    await cancelLocationStream();
-    super.dispose();
+  LocationState build() {
+    return LocationState.initial();
   }
 
   /// Marks the map as ready for interactions.
@@ -80,7 +73,7 @@ class LocationViewModel extends StateNotifier<LocationState> {
 
     _positionStream ??=
         Geolocator.getPositionStream().listen((Position position) {
-      if (mounted && _positionStream != null) {
+      if (_positionStream != null) {
 
         final timerProvider = ref.read(timerViewModelProvider.notifier);
         if (timerProvider.isTimerRunning() && timerProvider.hasTimerStarted()) {

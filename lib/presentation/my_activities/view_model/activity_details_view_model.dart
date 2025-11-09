@@ -12,17 +12,18 @@ import '../../home/view_model/home_view_model.dart';
 import 'state/activitie_details_state.dart';
 
 /// Provider for the activity details view model.
-final activityDetailsViewModelProvider = StateNotifierProvider.autoDispose<
+final activityDetailsViewModelProvider = NotifierProvider.autoDispose<
     ActivityDetailsViewModel,
-    ActivityDetailsState>((ref) => ActivityDetailsViewModel(ref));
+    ActivityDetailsState>(() => ActivityDetailsViewModel());
 
 /// View model for the activity details screen.
-class ActivityDetailsViewModel extends StateNotifier<ActivityDetailsState> {
-  late final Ref ref;
+class ActivityDetailsViewModel extends Notifier<ActivityDetailsState> {
   MapController? mapController;
 
-  ActivityDetailsViewModel(this.ref) : super(ActivityDetailsState.initial()) {
+  @override
+  ActivityDetailsState build() {
     mapController = MapController();
+    return ActivityDetailsState.initial();
   }
 
   /// Navigates back to the home screen.

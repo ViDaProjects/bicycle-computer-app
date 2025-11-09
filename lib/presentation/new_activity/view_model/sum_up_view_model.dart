@@ -8,21 +8,21 @@ import 'state/sum_up_state.dart';
 
 /// Provides the instance of [SumUpViewModel].
 final sumUpViewModel = Provider.autoDispose((ref) {
-  return SumUpViewModel(ref);
+  return SumUpViewModel();
 });
 
 /// Provides the state management for the SumUpScreen.
 final sumUpViewModelProvider =
-    StateNotifierProvider.autoDispose<SumUpViewModel, SumUpState>(
-  (ref) => SumUpViewModel(ref),
+    NotifierProvider.autoDispose<SumUpViewModel, SumUpState>(
+  () => SumUpViewModel(),
 );
 
 /// Represents the view model for the SumUpScreen.
-class SumUpViewModel extends StateNotifier<SumUpState> {
-  late Ref ref;
-
-  /// Creates a new instance of [SumUpViewModel] with the given [ref].
-  SumUpViewModel(this.ref) : super(SumUpState.initial());
+class SumUpViewModel extends Notifier<SumUpState> {
+  @override
+  SumUpState build() {
+    return SumUpState.initial();
+  }
 
   /// Finalizes the activity (data is saved by Android via BLE during the ride).
   void save() async {

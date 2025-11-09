@@ -6,17 +6,20 @@ import '../../../../data/repositories/user_repository_impl.dart';
 import 'state/profile_picture_state.dart';
 
 /// Provider for the profile picture view model.
-final profilePictureViewModelProvider = StateNotifierProvider.family<
+final profilePictureViewModelProvider = NotifierProvider.family<
     ProfilePictureViewModel,
     ProfilePictureState,
-    String>((ref, userId) => ProfilePictureViewModel(ref, userId));
+    String>((userId) => ProfilePictureViewModel(userId));
 
-class ProfilePictureViewModel extends StateNotifier<ProfilePictureState> {
-  late final Ref ref;
+class ProfilePictureViewModel extends Notifier<ProfilePictureState> {
   final String userId;
 
-  ProfilePictureViewModel(this.ref, this.userId)
-      : super(ProfilePictureState.initial());
+  ProfilePictureViewModel(this.userId);
+
+  @override
+  ProfilePictureState build() {
+    return ProfilePictureState.initial();
+  }
 
   Future<void> getProfilePicture(String userId) async {
     if (state.loaded == false) {

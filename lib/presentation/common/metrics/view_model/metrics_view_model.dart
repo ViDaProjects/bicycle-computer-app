@@ -11,25 +11,25 @@ import 'state/metrics_state.dart';
 /// A provider for [MetricsViewModel] that creates an instance of [MetricsViewModel] automatically
 /// and disposes it when no longer needed.
 final metricsViewModelProvider =
-    StateNotifierProvider.autoDispose<MetricsViewModel, MetricsState>(
-  (ref) => MetricsViewModel(ref.container),
+    NotifierProvider.autoDispose<MetricsViewModel, MetricsState>(
+  () => MetricsViewModel(),
 );
 
 /// The view model responsible for managing metrics state and calculations.
-class MetricsViewModel extends StateNotifier<MetricsState> {
-  final ProviderContainer _container;
+class MetricsViewModel extends Notifier<MetricsState> {
   late final TextToSpeechService textToSpeech;
 
-  /// Creates an instance of [MetricsViewModel] with the specified [ProviderContainer].
-  MetricsViewModel(this._container) : super(MetricsState.initial()) {
-    textToSpeech = _container.read(textToSpeechService);
+  @override
+  MetricsState build() {
+    textToSpeech = ref.read(textToSpeechService);
+    return MetricsState.initial();
   }
 
   /// Updates the metrics based on the current location and timer.
   Future<void> updateMetrics() async {
-    final location = _container.read(locationViewModelProvider);
-    final timer = _container.read(timerViewModelProvider.notifier);
-    final timerState = _container.read(timerViewModelProvider);
+    final location = ref.read(locationViewModelProvider);
+    final timer = ref.read(timerViewModelProvider.notifier);
+    final timerState = ref.read(timerViewModelProvider);
 
     final lastDistanceInteger = state.distance.toInt();
 
@@ -47,7 +47,7 @@ class MetricsViewModel extends StateNotifier<MetricsState> {
 
     final newDistanceInteger = state.distance.toInt();
     if (newDistanceInteger != lastDistanceInteger) {
-      final l10nConf = await _container.read(myAppProvider).getLocalizedConf();
+      final l10nConf = await ref.read(myAppProvider).getLocalizedConf();
 
       var textToSay = StringBuffer();
 

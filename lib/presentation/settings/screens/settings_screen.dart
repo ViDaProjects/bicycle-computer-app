@@ -142,6 +142,20 @@ class SettingsScreen extends HookConsumerWidget {
                         ),
                       ),
                     ),
+                    if (!state.isBluetoothEnabled) ...[
+                      const SizedBox(height: 4),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                        child: Text(
+                          'These settings are only available when BLE service is active',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: CupertinoColors.systemGrey,
+                            fontStyle: FontStyle.italic,
+                          ),
+                        ),
+                      ),
+                    ],
                     const SizedBox(height: 10),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 16.0),
@@ -152,23 +166,24 @@ class SettingsScreen extends HookConsumerWidget {
                             children: [
                               Icon(
                                 Icons.speed,
-                                color: ColorUtils.main,
+                                color: state.isBluetoothEnabled ? ColorUtils.main : CupertinoColors.systemGrey,
                                 size: 20,
                               ),
                               const SizedBox(width: 12),
-                              const Text(
+                              Text(
                                 'Speed',
                                 style: TextStyle(
                                   fontSize: 16,
                                   fontWeight: FontWeight.w400,
+                                  color: state.isBluetoothEnabled ? null : CupertinoColors.systemGrey,
                                 ),
                               ),
                             ],
                           ),
                           CupertinoSwitch(
                             value: state.showSpeedChart,
-                            onChanged: (value) => provider.toggleSpeedChart(),
-                            activeTrackColor: ColorUtils.main,
+                            onChanged: state.isBluetoothEnabled ? (value) => provider.toggleSpeedChart() : null,
+                            activeTrackColor: state.isBluetoothEnabled ? ColorUtils.main : CupertinoColors.systemGrey,
                           ),
                         ],
                       ),
@@ -183,23 +198,24 @@ class SettingsScreen extends HookConsumerWidget {
                             children: [
                               Icon(
                                 Icons.pedal_bike,
-                                color: ColorUtils.main,
+                                color: state.isBluetoothEnabled ? ColorUtils.main : CupertinoColors.systemGrey,
                                 size: 20,
                               ),
                               const SizedBox(width: 12),
-                              const Text(
+                              Text(
                                 'Cadence',
                                 style: TextStyle(
                                   fontSize: 16,
                                   fontWeight: FontWeight.w400,
+                                  color: state.isBluetoothEnabled ? null : CupertinoColors.systemGrey,
                                 ),
                               ),
                             ],
                           ),
                           CupertinoSwitch(
                             value: state.showCadenceChart,
-                            onChanged: (value) => provider.toggleCadenceChart(),
-                            activeTrackColor: ColorUtils.main,
+                            onChanged: state.isBluetoothEnabled ? (value) => provider.toggleCadenceChart() : null,
+                            activeTrackColor: state.isBluetoothEnabled ? ColorUtils.main : CupertinoColors.systemGrey,
                           ),
                         ],
                       ),
@@ -214,23 +230,24 @@ class SettingsScreen extends HookConsumerWidget {
                             children: [
                               Icon(
                                 Icons.flash_on,
-                                color: ColorUtils.main,
+                                color: state.isBluetoothEnabled ? ColorUtils.main : CupertinoColors.systemGrey,
                                 size: 20,
                               ),
                               const SizedBox(width: 12),
-                              const Text(
+                              Text(
                                 'Power',
                                 style: TextStyle(
                                   fontSize: 16,
                                   fontWeight: FontWeight.w400,
+                                  color: state.isBluetoothEnabled ? null : CupertinoColors.systemGrey,
                                 ),
                               ),
                             ],
                           ),
                           CupertinoSwitch(
                             value: state.showPowerChart,
-                            onChanged: (value) => provider.togglePowerChart(),
-                            activeTrackColor: ColorUtils.main,
+                            onChanged: state.isBluetoothEnabled ? (value) => provider.togglePowerChart() : null,
+                            activeTrackColor: state.isBluetoothEnabled ? ColorUtils.main : CupertinoColors.systemGrey,
                           ),
                         ],
                       ),
@@ -245,23 +262,24 @@ class SettingsScreen extends HookConsumerWidget {
                             children: [
                               Icon(
                                 Icons.terrain,
-                                color: ColorUtils.main,
+                                color: state.isBluetoothEnabled ? ColorUtils.main : CupertinoColors.systemGrey,
                                 size: 20,
                               ),
                               const SizedBox(width: 12),
-                              const Text(
+                              Text(
                                 'Altitude',
                                 style: TextStyle(
                                   fontSize: 16,
                                   fontWeight: FontWeight.w400,
+                                  color: state.isBluetoothEnabled ? null : CupertinoColors.systemGrey,
                                 ),
                               ),
                             ],
                           ),
                           CupertinoSwitch(
                             value: state.showAltitudeChart,
-                            onChanged: (value) => provider.toggleAltitudeChart(),
-                            activeTrackColor: ColorUtils.main,
+                            onChanged: state.isBluetoothEnabled ? (value) => provider.toggleAltitudeChart() : null,
+                            activeTrackColor: state.isBluetoothEnabled ? ColorUtils.main : CupertinoColors.systemGrey,
                           ),
                         ],
                       ),
@@ -276,23 +294,24 @@ class SettingsScreen extends HookConsumerWidget {
                             children: [
                               Icon(
                                 Icons.straighten,
-                                color: ColorUtils.main,
+                                color: state.isBluetoothEnabled ? ColorUtils.main : CupertinoColors.systemGrey,
                                 size: 20,
                               ),
                               const SizedBox(width: 12),
-                              const Text(
+                              Text(
                                 'Distance traveled',
                                 style: TextStyle(
                                   fontSize: 16,
                                   fontWeight: FontWeight.w400,
+                                  color: state.isBluetoothEnabled ? null : CupertinoColors.systemGrey,
                                 ),
                               ),
                             ],
                           ),
                           CupertinoSwitch(
                             value: state.showDistanceTraveled,
-                            onChanged: (value) => provider.toggleDistanceTraveled(),
-                            activeTrackColor: ColorUtils.main,
+                            onChanged: state.isBluetoothEnabled ? (value) => provider.toggleDistanceTraveled() : null,
+                            activeTrackColor: state.isBluetoothEnabled ? ColorUtils.main : CupertinoColors.systemGrey,
                           ),
                         ],
                       ),
@@ -307,23 +326,24 @@ class SettingsScreen extends HookConsumerWidget {
                             children: [
                               Icon(
                                 Icons.local_fire_department,
-                                color: ColorUtils.main,
+                                color: state.isBluetoothEnabled ? ColorUtils.main : CupertinoColors.systemGrey,
                                 size: 20,
                               ),
                               const SizedBox(width: 12),
-                              const Text(
+                              Text(
                                 'Calories',
                                 style: TextStyle(
                                   fontSize: 16,
                                   fontWeight: FontWeight.w400,
+                                  color: state.isBluetoothEnabled ? null : CupertinoColors.systemGrey,
                                 ),
                               ),
                             ],
                           ),
                           CupertinoSwitch(
                             value: state.showCalories,
-                            onChanged: (value) => provider.toggleCalories(),
-                            activeTrackColor: ColorUtils.main,
+                            onChanged: state.isBluetoothEnabled ? (value) => provider.toggleCalories() : null,
+                            activeTrackColor: state.isBluetoothEnabled ? ColorUtils.main : CupertinoColors.systemGrey,
                           ),
                         ],
                       ),
@@ -338,23 +358,24 @@ class SettingsScreen extends HookConsumerWidget {
                             children: [
                               Icon(
                                 Icons.map,
-                                color: ColorUtils.main,
+                                color: state.isBluetoothEnabled ? ColorUtils.main : CupertinoColors.systemGrey,
                                 size: 20,
                               ),
                               const SizedBox(width: 12),
-                              const Text(
+                              Text(
                                 'Map',
                                 style: TextStyle(
                                   fontSize: 16,
                                   fontWeight: FontWeight.w400,
+                                  color: state.isBluetoothEnabled ? null : CupertinoColors.systemGrey,
                                 ),
                               ),
                             ],
                           ),
                           CupertinoSwitch(
                             value: state.showMap,
-                            onChanged: (value) => provider.toggleMap(),
-                            activeTrackColor: ColorUtils.main,
+                            onChanged: state.isBluetoothEnabled ? (value) => provider.toggleMap() : null,
+                            activeTrackColor: state.isBluetoothEnabled ? ColorUtils.main : CupertinoColors.systemGrey,
                           ),
                         ],
                       ),

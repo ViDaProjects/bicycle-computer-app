@@ -11,14 +11,15 @@ import 'state/activity_list_state.dart';
 
 /// The provider for the activity list view model.
 final activityListViewModelProvider =
-    StateNotifierProvider.autoDispose<ActivityListViewModel, ActivityListState>(
-        (ref) => ActivityListViewModel(ref));
+    NotifierProvider.autoDispose<ActivityListViewModel, ActivityListState>(
+        () => ActivityListViewModel());
 
 /// The view model for the activity list screen.
-class ActivityListViewModel extends StateNotifier<ActivityListState> {
-  late final Ref ref;
-
-  ActivityListViewModel(this.ref) : super(ActivityListState.initial());
+class ActivityListViewModel extends Notifier<ActivityListState> {
+  @override
+  ActivityListState build() {
+    return ActivityListState.initial();
+  }
 
   /// Fetches the list of activities.
   Future<EntityPage<Activity>> fetchActivities({int pageNumber = 0}) async {

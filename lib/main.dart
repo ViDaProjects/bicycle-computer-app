@@ -54,9 +54,18 @@ void main() async {
 }
 
 /// Provider for the theme mode.
-final themeModeProvider = StateProvider<ThemeMode>((ref) {
-  return ThemeMode.light;
-});
+final themeModeProvider = NotifierProvider<ThemeModeNotifier, ThemeMode>(() => ThemeModeNotifier());
+
+class ThemeModeNotifier extends Notifier<ThemeMode> {
+  @override
+  ThemeMode build() {
+    return ThemeMode.light;
+  }
+
+  void setThemeMode(ThemeMode mode) {
+    state = mode;
+  }
+}
 
 /// Provider for the MyAppViewModel.
 final myAppProvider = Provider((ref) {
