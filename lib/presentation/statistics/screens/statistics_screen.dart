@@ -38,44 +38,56 @@ class StatisticsScreen extends HookConsumerWidget {
                     const SizedBox(height: 20),
                     if (selectedActivity != null) ...[
                       // Time and Duration Cards (Top Priority)
-                      Card(
+                        Card(
                         elevation: 4,
                         child: Padding(
                           padding: const EdgeInsets.all(16.0),
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                             children: [
-                              // Start Time Column
-                              Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(
-                                    Icons.access_time,
-                                    size: 24,
-                                    color: ColorUtils.main,
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    'Start Time',
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.bold,
-                                      color: Theme.of(context).brightness == Brightness.dark ? Colors.white : Colors.black87,
-                                    ),
-                                    textAlign: TextAlign.center,
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    DateFormat('HH:mm:ss\ndd/MM/yyyy').format(selectedActivity!.startDatetime),
-                                    style: const TextStyle(
-                                      fontSize: 10,
-                                      color: Colors.grey,
-                                      height: 1.2,
-                                    ),
-                                    textAlign: TextAlign.center,
-                                  ),
-                                ],
-                              ),
+                                // Before showing, ensure start <= end. If not, swap them.
+                                // This avoids negative durations while preserving chronological order.
+                                Builder(builder: (ctx) {
+                                  DateTime start = selectedActivity!.startDatetime;
+                                  DateTime end = selectedActivity!.endDatetime;
+                                  if (end.isBefore(start)) {
+                                    final tmp = start;
+                                    start = end;
+                                    end = tmp;
+                                  }
+
+                                  // Start Time Column
+                                  return Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(
+                                        Icons.access_time,
+                                        size: 24,
+                                        color: ColorUtils.main,
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        'Start Time',
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.bold,
+                                          color: Theme.of(context).brightness == Brightness.dark ? Colors.white : Colors.black87,
+                                        ),
+                                        textAlign: TextAlign.center,
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        DateFormat('HH:mm:ss\ndd/MM/yyyy').format(start),
+                                        style: const TextStyle(
+                                          fontSize: 10,
+                                          color: Colors.grey,
+                                          height: 1.2,
+                                        ),
+                                        textAlign: TextAlign.center,
+                                      ),
+                                    ],
+                                  );
+                                }),
                               // Vertical separator
                               Container(
                                 height: 60,
@@ -84,37 +96,47 @@ class StatisticsScreen extends HookConsumerWidget {
                                     ? Colors.white.withValues(alpha: 0.3)
                                     : Colors.grey.withValues(alpha: 0.3),
                               ),
-                              // End Time Column
-                              Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(
-                                    Icons.access_time_filled,
-                                    size: 24,
-                                    color: ColorUtils.main,
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    'End Time',
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.bold,
-                                      color: Theme.of(context).brightness == Brightness.dark ? Colors.white : Colors.black87,
+                              // End Time Column (uses same swapped start/end from Builder above)
+                              Builder(builder: (ctx) {
+                                DateTime start = selectedActivity!.startDatetime;
+                                DateTime end = selectedActivity!.endDatetime;
+                                if (end.isBefore(start)) {
+                                  final tmp = start;
+                                  start = end;
+                                  end = tmp;
+                                }
+
+                                return Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(
+                                      Icons.access_time_filled,
+                                      size: 24,
+                                      color: ColorUtils.main,
                                     ),
-                                    textAlign: TextAlign.center,
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    DateFormat('HH:mm:ss\ndd/MM/yyyy').format(selectedActivity!.endDatetime),
-                                    style: const TextStyle(
-                                      fontSize: 10,
-                                      color: Colors.grey,
-                                      height: 1.2,
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      'End Time',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.bold,
+                                        color: Theme.of(context).brightness == Brightness.dark ? Colors.white : Colors.black87,
+                                      ),
+                                      textAlign: TextAlign.center,
                                     ),
-                                    textAlign: TextAlign.center,
-                                  ),
-                                ],
-                              ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      DateFormat('HH:mm:ss\ndd/MM/yyyy').format(end),
+                                      style: const TextStyle(
+                                        fontSize: 10,
+                                        color: Colors.grey,
+                                        height: 1.2,
+                                      ),
+                                      textAlign: TextAlign.center,
+                                    ),
+                                  ],
+                                );
+                              }),
                               // Vertical separator
                               Container(
                                 height: 60,
@@ -123,37 +145,49 @@ class StatisticsScreen extends HookConsumerWidget {
                                     ? Colors.white.withValues(alpha: 0.3)
                                     : Colors.grey.withValues(alpha: 0.3),
                               ),
-                              // Duration Column
-                              Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(
-                                    Icons.timer,
-                                    size: 24,
-                                    color: ColorUtils.main,
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    'Duration',
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.bold,
-                                      color: Theme.of(context).brightness == Brightness.dark ? Colors.white : Colors.black87,
+                              // Duration Column (calculates from ordered start/end)
+                              Builder(builder: (ctx) {
+                                DateTime start = selectedActivity!.startDatetime;
+                                DateTime end = selectedActivity!.endDatetime;
+                                if (end.isBefore(start)) {
+                                  final tmp = start;
+                                  start = end;
+                                  end = tmp;
+                                }
+
+                                final duration = end.difference(start);
+
+                                return Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(
+                                      Icons.timer,
+                                      size: 24,
+                                      color: ColorUtils.main,
                                     ),
-                                    textAlign: TextAlign.center,
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    _formatDuration(selectedActivity!.endDatetime.difference(selectedActivity!.startDatetime)),
-                                    style: const TextStyle(
-                                      fontSize: 10,
-                                      color: Colors.grey,
-                                      height: 1.2,
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      'Duration',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.bold,
+                                        color: Theme.of(context).brightness == Brightness.dark ? Colors.white : Colors.black87,
+                                      ),
+                                      textAlign: TextAlign.center,
                                     ),
-                                    textAlign: TextAlign.center,
-                                  ),
-                                ],
-                              ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      _formatDuration(duration),
+                                      style: const TextStyle(
+                                        fontSize: 10,
+                                        color: Colors.grey,
+                                        height: 1.2,
+                                      ),
+                                      textAlign: TextAlign.center,
+                                    ),
+                                  ],
+                                );
+                              }),
                             ],
                           ),
                         ),
@@ -515,6 +549,11 @@ class StatisticsScreen extends HookConsumerWidget {
 
   /// Formats a Duration into a readable string (HH:MM:SS).
   String _formatDuration(Duration duration) {
+    // If negative, use absolute duration (handles cases where end < start)
+    if (duration.isNegative) {
+      duration = Duration(microseconds: duration.inMicroseconds.abs());
+    }
+
     String twoDigits(int n) => n.toString().padLeft(2, '0');
     final hours = twoDigits(duration.inHours);
     final minutes = twoDigits(duration.inMinutes.remainder(60));

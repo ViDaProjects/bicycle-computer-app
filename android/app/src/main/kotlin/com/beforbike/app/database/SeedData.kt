@@ -43,8 +43,9 @@ object SeedData {
         val powers = listOf(165f, 172f, 158f, 185f, 175f)
         val cadences = listOf(88f, 92f, 85f, 95f, 89f)
 
-        // Ensure ride exists first
-        if (!dbHelper.ensureRideExists(SAMPLE_RIDE_ID, "Sample Ride")) {
+        // Ensure ride exists first (pass a proper timestamp string, not a label)
+        val startTimeStr = java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS", java.util.Locale.getDefault()).format(java.util.Date(baseTime))
+        if (!dbHelper.ensureRideExists(SAMPLE_RIDE_ID, startTimeStr)) {
             android.util.Log.e("BeForBike", "Failed to ensure ride exists")
             return
         }
