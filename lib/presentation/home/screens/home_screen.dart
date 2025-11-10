@@ -70,7 +70,12 @@ class HomeScreen extends HookConsumerWidget {
         bottomNavigationBar: Container(
             color: ColorUtils.mainMedium,
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+              padding: EdgeInsets.only(
+                left: 8,
+                right: 8,
+                top: 8,
+                bottom: 8 + MediaQuery.of(context).padding.bottom,
+              ),
               child: GNav(
                 backgroundColor: ColorUtils.mainMedium,
                 color: ColorUtils.white,
